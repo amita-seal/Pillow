@@ -15,7 +15,7 @@ and **xmllib** modules.
 Example: Parse an image
 -----------------------
 
-::
+.. code-block:: python
 
     from PIL import ImageFile
 
@@ -40,16 +40,8 @@ Classes
 .. autoclass:: PIL.ImageFile.Parser()
     :members:
 
-.. autoclass:: PIL.ImageFile.PyCodec()
-    :members:
-
 .. autoclass:: PIL.ImageFile.PyDecoder()
     :members:
-    :show-inheritance:
-
-.. autoclass:: PIL.ImageFile.PyEncoder()
-    :members:
-    :show-inheritance:
 
 .. autoclass:: PIL.ImageFile.ImageFile()
     :member-order: bysource
@@ -60,10 +52,3 @@ Classes
 .. autoclass:: PIL.ImageFile.StubImageFile()
     :members:
     :show-inheritance:
-
-Constants
----------
-
-.. autodata:: PIL.ImageFile.LOAD_TRUNCATED_IMAGES
-.. autodata:: PIL.ImageFile.ERRORS
-    :annotation:

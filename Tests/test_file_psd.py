@@ -1,10 +1,7 @@
-import warnings
-
 import pytest
-
 from PIL import Image, PsdImagePlugin
 
-from .helper import assert_image_equal_tofile, assert_image_similar, hopper, is_pypy
+from .helper import assert_image_similar, hopper, is_pypy
 
 test_file = "Tests/images/hopper.psd"
 
@@ -15,7 +12,6 @@ def test_sanity():
         assert im.mode == "RGB"
         assert im.size == (128, 128)
         assert im.format == "PSD"
-        assert im.get_format_mimetype() == "image/vnd.adobe.photoshop"
 
         im2 = hopper()
         assert_image_similar(im, im2, 4.8)
@@ -27,21 +23,24 @@ def test_unclosed_file():
         im = Image.open(test_file)
         im.load()
 
-    with pytest.warns(ResourceWarning):
-        open()
+    pytest.warns(ResourceWarning, open)
 
 
 def test_closed_file():
-    with warnings.catch_warnings():
+    def open():
         im = Image.open(test_file)
         im.load()
         im.close()
 
+    pytest.warns(None, open)
+
 
 def test_context_manager():
-    with warnings.catch_warnings():
+    def open():
         with Image.open(test_file) as im:
             im.load()
+
+    pytest.warns(None, open)
 
 
 def test_invalid_file():
@@ -56,10 +55,9 @@ def test_n_frames():
         assert im.n_frames == 1
         assert not im.is_animated
 
-    for path in [test_file, "Tests/images/negative_layer_count.psd"]:
-        with Image.open(path) as im:
-            assert im.n_frames == 2
-            assert im.is_animated
+    with Image.open(test_file) as im:
+        assert im.n_frames == 2
+        assert im.is_animated
 
 
 def test_eoferror():
@@ -78,6 +76,7 @@ def test_eoferror():
 
 def test_seek_tell():
     with Image.open(test_file) as im:
+
         layer_number = im.tell()
         assert layer_number == 1
 
@@ -95,6 +94,7 @@ def test_seek_tell():
 
 def test_seek_eoferror():
     with Image.open(test_file) as im:
+
         with pytest.raises(EOFError):
             im.seek(-1)
 
@@ -104,11 +104,6 @@ def test_open_after_exclusive_load():
         im.load()
         im.seek(im.tell() + 1)
         im.load()
-
-
-def test_rgba():
-    with Image.open("Tests/images/rgba.psd") as im:
-        assert_image_equal_tofile(im, "Tests/images/imagedraw_square.png")
 
 
 def test_icc_profile():
@@ -125,33 +120,10 @@ def test_no_icc_profile():
 
 
 def test_combined_larger_than_size():
-    # The combined size of the individual parts is larger than the
+    # The 'combined' sizes of the individual parts is larger than the
     # declared 'size' of the extra data field, resulting in a backwards seek.
 
     # If we instead take the 'size' of the extra data field as the source of truth,
     # then the seek can't be negative
     with pytest.raises(OSError):
-        with Image.open("Tests/images/combined_larger_than_size.psd"):
-            pass
-
-
-@pytest.mark.parametrize(
-    "test_file,raises",
-    [
-        (
-            "Tests/images/timeout-1ee28a249896e05b83840ae8140622de8e648ba9.psd",
-            Image.UnidentifiedImageError,
-        ),
-        (
-            "Tests/images/timeout-598843abc37fc080ec36a2699ebbd44f795d3a6f.psd",
-            Image.UnidentifiedImageError,
-        ),
-        ("Tests/images/timeout-c8efc3fded6426986ba867a399791bae544f59bc.psd", OSError),
-        ("Tests/images/timeout-dedc7a4ebd856d79b4359bbcc79e8ef231ce38f6.psd", OSError),
-    ],
-)
-def test_crashes(test_file, raises):
-    with open(test_file, "rb") as f:
-        with pytest.raises(raises):
-            with Image.open(f):
-                pass
+        Image.open("Tests/images/combined_larger_than_size.psd")

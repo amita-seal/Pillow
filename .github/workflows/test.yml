@@ -1,22 +1,6 @@
 name: Test
 
-on:
-  push:
-    paths-ignore:
-      - ".github/workflows/docs.yml"
-      - "docs/**"
-  pull_request:
-    paths-ignore:
-      - ".github/workflows/docs.yml"
-      - "docs/**"
-  workflow_dispatch:
-
-permissions:
-  contents: read
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+on: [push, pull_request]
 
 jobs:
   build:
@@ -25,54 +9,70 @@ jobs:
       fail-fast: false
       matrix:
         os: [
-          "macos-latest",
           "ubuntu-latest",
+          "macOS-latest",
         ]
         python-version: [
-          "pypy3.9",
-          "pypy3.8",
-          "3.12-dev",
-          "3.11",
-          "3.10",
-          "3.9",
+          "pypy3",
           "3.8",
+          "3.7",
+          "3.6",
+          "3.5",
         ]
         include:
-        - python-version: "3.9"
-          PYTHONOPTIMIZE: 1
-          REVERSE: "--reverse"
-        - python-version: "3.8"
-          PYTHONOPTIMIZE: 2
+        - python-version: "3.5"
+          env: PYTHONOPTIMIZE=2
+        - python-version: "3.6"
+          env: PYTHONOPTIMIZE=1
+        # Include new variables for Codecov
+        - os: ubuntu-latest
+          codecov-flag: GHA_Ubuntu
+        - os: macOS-latest
+          codecov-flag: GHA_macOS
 
     runs-on: ${{ matrix.os }}
     name: ${{ matrix.os }} Python ${{ matrix.python-version }}
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v2
+
+    - name: Ubuntu cache
+      uses: actions/cache@v1
+      if: startsWith(matrix.os, 'ubuntu')
+      with:
+        path: ~/.cache/pip
+        key:
+          ${{ matrix.os }}-${{ matrix.python-version }}-${{ hashFiles('**/.ci/*.sh') }}
+        restore-keys: |
+          ${{ matrix.os }}-${{ matrix.python-version }}-
+
+    - name: macOS cache
+      uses: actions/cache@v1
+      if: startsWith(matrix.os, 'macOS')
+      with:
+        path: ~/Library/Caches/pip
+        key:
+          ${{ matrix.os }}-${{ matrix.python-version }}-${{ hashFiles('**/.ci/*.sh') }}
+        restore-keys: |
+          ${{ matrix.os }}-${{ matrix.python-version }}-
 
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v1
       with:
         python-version: ${{ matrix.python-version }}
-        cache: pip
-        cache-dependency-path: ".ci/*.sh"
 
     - name: Build system information
-      run: python3 .github/workflows/system-info.py
+      run: python .github/workflows/system-info.py
 
     - name: Install Linux dependencies
       if: startsWith(matrix.os, 'ubuntu')
       run: |
         .ci/install.sh
-      env:
-        GHA_PYTHON_VERSION: ${{ matrix.python-version }}
 
     - name: Install macOS dependencies
       if: startsWith(matrix.os, 'macOS')
       run: |
         .github/workflows/macos-install.sh
-      env:
-        GHA_PYTHON_VERSION: ${{ matrix.python-version }}
 
     - name: Build
       run: |
@@ -80,49 +80,32 @@ jobs:
 
     - name: Test
       run: |
-        if [ $REVERSE ]; then
-          python3 -m pip install pytest-reverse
-        fi
-        if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
-          xvfb-run -s '-screen 0 1024x768x24' sway&
-          export WAYLAND_DISPLAY=wayland-1
-          .ci/test.sh
-        else
-          .ci/test.sh
-        fi
-      env:
-        PYTHONOPTIMIZE: ${{ matrix.PYTHONOPTIMIZE }}
-        REVERSE: ${{ matrix.REVERSE }}
+        .ci/test.sh
 
     - name: Prepare to upload errors
       if: failure()
       run: |
         mkdir -p Tests/errors
+      shell: pwsh
 
     - name: Upload errors
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v1
       if: failure()
       with:
         name: errors
         path: Tests/errors
+
+    - name: Docs
+      if: startsWith(matrix.os, 'ubuntu') && matrix.python-version == 3.8
+      run: |
+        pip install sphinx-rtd-theme
+        make doccheck
 
     - name: After success
       run: |
         .ci/after_success.sh
 
     - name: Upload coverage
-      uses: codecov/codecov-action@v3
-      with:
-        flags: ${{ matrix.os == 'macos-latest' && 'GHA_macOS' || 'GHA_Ubuntu' }}
-        name: ${{ matrix.os }} Python ${{ matrix.python-version }}
-        gcov: true
-
-  success:
-    permissions:
-      contents: none
-    needs: build
-    runs-on: ubuntu-latest
-    name: Test Successful
-    steps:
-      - name: Success
-        run: echo Test Successful
+      run: bash <(curl -s https://codecov.io/bash) -F ${{ matrix.codecov-flag }}
+      env:
+        CODECOV_NAME: ${{ matrix.os }} Python ${{ matrix.python-version }}

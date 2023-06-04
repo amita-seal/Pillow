@@ -1,12 +1,10 @@
 import tempfile
-import warnings
 from io import BytesIO
 
 import pytest
-
 from PIL import Image, ImageSequence, SpiderImagePlugin
 
-from .helper import assert_image_equal_tofile, hopper, is_pypy
+from .helper import assert_image_equal, hopper, is_pypy
 
 TEST_FILE = "Tests/images/hopper.spider"
 
@@ -25,21 +23,24 @@ def test_unclosed_file():
         im = Image.open(TEST_FILE)
         im.load()
 
-    with pytest.warns(ResourceWarning):
-        open()
+    pytest.warns(ResourceWarning, open)
 
 
 def test_closed_file():
-    with warnings.catch_warnings():
+    def open():
         im = Image.open(TEST_FILE)
         im.load()
         im.close()
 
+    pytest.warns(None, open)
+
 
 def test_context_manager():
-    with warnings.catch_warnings():
+    def open():
         with Image.open(TEST_FILE) as im:
             im.load()
+
+    pytest.warns(None, open)
 
 
 def test_save(tmp_path):
@@ -80,6 +81,7 @@ def test_is_spider_image():
 def test_tell():
     # Arrange
     with Image.open(TEST_FILE) as im:
+
         # Act
         index = im.tell()
 
@@ -133,8 +135,7 @@ def test_invalid_file():
     invalid_file = "Tests/images/invalid.spider"
 
     with pytest.raises(OSError):
-        with Image.open(invalid_file):
-            pass
+        Image.open(invalid_file)
 
 
 def test_nonstack_file():
@@ -157,4 +158,5 @@ def test_odd_size():
     im.save(data, format="SPIDER")
 
     data.seek(0)
-    assert_image_equal_tofile(im, data)
+    with Image.open(data) as im2:
+        assert_image_equal(im, im2)

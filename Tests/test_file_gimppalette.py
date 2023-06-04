@@ -1,5 +1,4 @@
 import pytest
-
 from PIL.GimpPaletteFile import GimpPaletteFile
 
 

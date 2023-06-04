@@ -11,6 +11,7 @@ TEST_FILE = "Tests/images/iptc.jpg"
 def test_getiptcinfo_jpg_none():
     # Arrange
     with hopper() as im:
+
         # Act
         iptc = IptcImagePlugin.getiptcinfo(im)
 
@@ -21,6 +22,7 @@ def test_getiptcinfo_jpg_none():
 def test_getiptcinfo_jpg_found():
     # Arrange
     with Image.open(TEST_FILE) as im:
+
         # Act
         iptc = IptcImagePlugin.getiptcinfo(im)
 
@@ -33,6 +35,7 @@ def test_getiptcinfo_jpg_found():
 def test_getiptcinfo_tiff_none():
     # Arrange
     with Image.open("Tests/images/hopper.tif") as im:
+
         # Act
         iptc = IptcImagePlugin.getiptcinfo(im)
 

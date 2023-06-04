@@ -1,7 +1,6 @@
 import sys
 
 import pytest
-
 from PIL import Image
 
 X = 255
@@ -207,9 +206,6 @@ class TestLibPack:
                 0x01000083,
             )
 
-    def test_I16(self):
-        self.assert_pack("I;16N", "I;16N", 2, 0x0201, 0x0403, 0x0605)
-
     def test_F_float(self):
         self.assert_pack("F", "F;32F", 4, 1.539989614439558e-36, 4.063216068939723e-34)
 
@@ -323,23 +319,6 @@ class TestLibUnpack:
         self.assert_unpack("RGB", "G", 1, (0, 1, 0), (0, 2, 0), (0, 3, 0))
         self.assert_unpack("RGB", "B", 1, (0, 0, 1), (0, 0, 2), (0, 0, 3))
 
-        self.assert_unpack("RGB", "R;16B", 2, (1, 0, 0), (3, 0, 0), (5, 0, 0))
-        self.assert_unpack("RGB", "G;16B", 2, (0, 1, 0), (0, 3, 0), (0, 5, 0))
-        self.assert_unpack("RGB", "B;16B", 2, (0, 0, 1), (0, 0, 3), (0, 0, 5))
-
-        self.assert_unpack("RGB", "R;16L", 2, (2, 0, 0), (4, 0, 0), (6, 0, 0))
-        self.assert_unpack("RGB", "G;16L", 2, (0, 2, 0), (0, 4, 0), (0, 6, 0))
-        self.assert_unpack("RGB", "B;16L", 2, (0, 0, 2), (0, 0, 4), (0, 0, 6))
-
-        if sys.byteorder == "little":
-            self.assert_unpack("RGB", "R;16N", 2, (2, 0, 0), (4, 0, 0), (6, 0, 0))
-            self.assert_unpack("RGB", "G;16N", 2, (0, 2, 0), (0, 4, 0), (0, 6, 0))
-            self.assert_unpack("RGB", "B;16N", 2, (0, 0, 2), (0, 0, 4), (0, 0, 6))
-        else:
-            self.assert_unpack("RGB", "R;16N", 2, (1, 0, 0), (3, 0, 0), (5, 0, 0))
-            self.assert_unpack("RGB", "G;16N", 2, (0, 1, 0), (0, 3, 0), (0, 5, 0))
-            self.assert_unpack("RGB", "B;16N", 2, (0, 0, 1), (0, 0, 3), (0, 0, 5))
-
     def test_RGBA(self):
         self.assert_unpack("RGBA", "LA", 2, (1, 1, 1, 2), (3, 3, 3, 4), (5, 5, 5, 6))
         self.assert_unpack(
@@ -447,8 +426,6 @@ class TestLibUnpack:
         self.assert_unpack("RGBA", "RGBA;4B", 2, (17, 0, 34, 0), (51, 0, 68, 0))
         self.assert_unpack("RGBA", "RGBA;16L", 8, (2, 4, 6, 8), (10, 12, 14, 16))
         self.assert_unpack("RGBA", "RGBA;16B", 8, (1, 3, 5, 7), (9, 11, 13, 15))
-        self.assert_unpack("RGBA", "BGRA;16L", 8, (6, 4, 2, 8), (14, 12, 10, 16))
-        self.assert_unpack("RGBA", "BGRA;16B", 8, (5, 3, 1, 7), (13, 11, 9, 15))
         self.assert_unpack(
             "RGBA", "BGRA", 4, (3, 2, 1, 4), (7, 6, 5, 8), (11, 10, 9, 12)
         )
@@ -471,43 +448,6 @@ class TestLibUnpack:
         self.assert_unpack("RGBA", "G", 1, (0, 1, 0, 0), (0, 2, 0, 0), (0, 3, 0, 0))
         self.assert_unpack("RGBA", "B", 1, (0, 0, 1, 0), (0, 0, 2, 0), (0, 0, 3, 0))
         self.assert_unpack("RGBA", "A", 1, (0, 0, 0, 1), (0, 0, 0, 2), (0, 0, 0, 3))
-
-        self.assert_unpack("RGBA", "R;16B", 2, (1, 0, 0, 0), (3, 0, 0, 0), (5, 0, 0, 0))
-        self.assert_unpack("RGBA", "G;16B", 2, (0, 1, 0, 0), (0, 3, 0, 0), (0, 5, 0, 0))
-        self.assert_unpack("RGBA", "B;16B", 2, (0, 0, 1, 0), (0, 0, 3, 0), (0, 0, 5, 0))
-        self.assert_unpack("RGBA", "A;16B", 2, (0, 0, 0, 1), (0, 0, 0, 3), (0, 0, 0, 5))
-
-        self.assert_unpack("RGBA", "R;16L", 2, (2, 0, 0, 0), (4, 0, 0, 0), (6, 0, 0, 0))
-        self.assert_unpack("RGBA", "G;16L", 2, (0, 2, 0, 0), (0, 4, 0, 0), (0, 6, 0, 0))
-        self.assert_unpack("RGBA", "B;16L", 2, (0, 0, 2, 0), (0, 0, 4, 0), (0, 0, 6, 0))
-        self.assert_unpack("RGBA", "A;16L", 2, (0, 0, 0, 2), (0, 0, 0, 4), (0, 0, 0, 6))
-
-        if sys.byteorder == "little":
-            self.assert_unpack(
-                "RGBA", "R;16N", 2, (2, 0, 0, 0), (4, 0, 0, 0), (6, 0, 0, 0)
-            )
-            self.assert_unpack(
-                "RGBA", "G;16N", 2, (0, 2, 0, 0), (0, 4, 0, 0), (0, 6, 0, 0)
-            )
-            self.assert_unpack(
-                "RGBA", "B;16N", 2, (0, 0, 2, 0), (0, 0, 4, 0), (0, 0, 6, 0)
-            )
-            self.assert_unpack(
-                "RGBA", "A;16N", 2, (0, 0, 0, 2), (0, 0, 0, 4), (0, 0, 0, 6)
-            )
-        else:
-            self.assert_unpack(
-                "RGBA", "R;16N", 2, (1, 0, 0, 0), (3, 0, 0, 0), (5, 0, 0, 0)
-            )
-            self.assert_unpack(
-                "RGBA", "G;16N", 2, (0, 1, 0, 0), (0, 3, 0, 0), (0, 5, 0, 0)
-            )
-            self.assert_unpack(
-                "RGBA", "B;16N", 2, (0, 0, 1, 0), (0, 0, 3, 0), (0, 0, 5, 0)
-            )
-            self.assert_unpack(
-                "RGBA", "A;16N", 2, (0, 0, 0, 1), (0, 0, 0, 3), (0, 0, 0, 5)
-            )
 
     def test_RGBa(self):
         self.assert_unpack(
@@ -757,7 +697,6 @@ class TestLibUnpack:
 
     def test_I16(self):
         self.assert_unpack("I;16", "I;16", 2, 0x0201, 0x0403, 0x0605)
-        self.assert_unpack("I;16", "I;16B", 2, 0x0102, 0x0304, 0x0506)
         self.assert_unpack("I;16B", "I;16B", 2, 0x0102, 0x0304, 0x0506)
         self.assert_unpack("I;16L", "I;16L", 2, 0x0201, 0x0403, 0x0605)
         self.assert_unpack("I;16", "I;12", 2, 0x0010, 0x0203, 0x0040)
@@ -765,12 +704,10 @@ class TestLibUnpack:
             self.assert_unpack("I;16", "I;16N", 2, 0x0201, 0x0403, 0x0605)
             self.assert_unpack("I;16B", "I;16N", 2, 0x0201, 0x0403, 0x0605)
             self.assert_unpack("I;16L", "I;16N", 2, 0x0201, 0x0403, 0x0605)
-            self.assert_unpack("I;16N", "I;16N", 2, 0x0201, 0x0403, 0x0605)
         else:
             self.assert_unpack("I;16", "I;16N", 2, 0x0102, 0x0304, 0x0506)
             self.assert_unpack("I;16B", "I;16N", 2, 0x0102, 0x0304, 0x0506)
             self.assert_unpack("I;16L", "I;16N", 2, 0x0102, 0x0304, 0x0506)
-            self.assert_unpack("I;16N", "I;16N", 2, 0x0102, 0x0304, 0x0506)
 
     def test_CMYK16(self):
         self.assert_unpack("CMYK", "CMYK;16L", 8, (2, 4, 6, 8), (10, 12, 14, 16))

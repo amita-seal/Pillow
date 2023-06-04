@@ -1,10 +1,9 @@
 import os
 
 import pytest
-
 from PIL import Image, MspImagePlugin
 
-from .helper import assert_image_equal, assert_image_equal_tofile, hopper
+from .helper import assert_image_equal, hopper
 
 TEST_FILE = "Tests/images/hopper.msp"
 EXTRA_DIR = "Tests/images/picins"
@@ -44,6 +43,7 @@ def test_open_windows_v1():
     # Arrange
     # Act
     with Image.open(TEST_FILE) as im:
+
         # Assert
         assert_image_equal(im, hopper("1"))
         assert isinstance(im, MspImagePlugin.MspImageFile)
@@ -51,13 +51,15 @@ def test_open_windows_v1():
 
 def _assert_file_image_equal(source_path, target_path):
     with Image.open(source_path) as im:
-        assert_image_equal_tofile(im, target_path)
+        with Image.open(target_path) as target:
+            assert_image_equal(im, target)
 
 
 @pytest.mark.skipif(
     not os.path.exists(EXTRA_DIR), reason="Extra image files not installed"
 )
 def test_open_windows_v2():
+
     files = (
         os.path.join(EXTRA_DIR, f)
         for f in os.listdir(EXTRA_DIR)

@@ -75,12 +75,19 @@ can be easily displayed in a chromaticity diagram, for example).
         space, e.g. ``XYZ␣``, ``RGB␣`` or ``CMYK`` (see 7.2.6 of
         ICC.1:2010 for details).
 
+        Note that the deprecated attribute ``color_space`` contains an
+        interpreted (non-padded) variant of this (but can be empty on
+        unknown input).
+
     .. py:attribute:: connection_space
         :type: str
 
         4-character string (padded with whitespace) identifying the color
         space on the B-side of the transform (see 7.2.7 of ICC.1:2010 for
         details).
+
+        Note that the deprecated attribute ``pcs`` contains an interpreted
+        (non-padded) variant of this (but can be empty on unknown input).
 
     .. py:attribute:: header_flags
         :type: int
@@ -118,8 +125,8 @@ can be easily displayed in a chromaticity diagram, for example).
         another profile (usually overridden at run-time, but provided here
         for DeviceLink and embedded source profiles, see 7.2.15 of ICC.1:2010).
 
-        One of ``ImageCms.Intent.ABSOLUTE_COLORIMETRIC``, ``ImageCms.Intent.PERCEPTUAL``,
-        ``ImageCms.Intent.RELATIVE_COLORIMETRIC`` and ``ImageCms.Intent.SATURATION``.
+        One of ``ImageCms.INTENT_ABSOLUTE_COLORIMETRIC``, ``ImageCms.INTENT_PERCEPTUAL``,
+        ``ImageCms.INTENT_RELATIVE_COLORIMETRIC`` and ``ImageCms.INTENT_SATURATION``.
 
     .. py:attribute:: profile_id
         :type: bytes
@@ -200,7 +207,7 @@ can be easily displayed in a chromaticity diagram, for example).
 
         The chromatic adaption matrix converts a color measured using the
         actual illumination conditions and relative to the actual adopted
-        white, to a color relative to the PCS adopted white, with
+        white, to an color relative to the PCS adopted white, with
         complete adaptation from the actual adopted white chromaticity to
         the PCS adopted white chromaticity (see 9.2.15 of ICC.1:2010).
 
@@ -313,14 +320,14 @@ can be easily displayed in a chromaticity diagram, for example).
         the CLUT model.
 
         The dictionary is indexed by intents
-        (``ImageCms.Intent.ABSOLUTE_COLORIMETRIC``,
-        ``ImageCms.Intent.PERCEPTUAL``,
-        ``ImageCms.Intent.RELATIVE_COLORIMETRIC`` and
-        ``ImageCms.Intent.SATURATION``).
+        (``ImageCms.INTENT_ABSOLUTE_COLORIMETRIC``,
+        ``ImageCms.INTENT_PERCEPTUAL``,
+        ``ImageCms.INTENT_RELATIVE_COLORIMETRIC`` and
+        ``ImageCms.INTENT_SATURATION``).
 
         The values are 3-tuples indexed by directions
-        (``ImageCms.Direction.INPUT``, ``ImageCms.Direction.OUTPUT``,
-        ``ImageCms.Direction.PROOF``).
+        (``ImageCms.DIRECTION_INPUT``, ``ImageCms.DIRECTION_OUTPUT``,
+        ``ImageCms.DIRECTION_PROOF``).
 
         The elements of the tuple are booleans.  If the value is ``True``,
         that intent is supported for that direction.
@@ -331,17 +338,66 @@ can be easily displayed in a chromaticity diagram, for example).
         Returns a dictionary of all supported intents and directions.
 
         The dictionary is indexed by intents
-        (``ImageCms.Intent.ABSOLUTE_COLORIMETRIC``,
-        ``ImageCms.Intent.PERCEPTUAL``,
-        ``ImageCms.Intent.RELATIVE_COLORIMETRIC`` and
-        ``ImageCms.Intent.SATURATION``).
+        (``ImageCms.INTENT_ABSOLUTE_COLORIMETRIC``,
+        ``ImageCms.INTENT_PERCEPTUAL``,
+        ``ImageCms.INTENT_RELATIVE_COLORIMETRIC`` and
+        ``ImageCms.INTENT_SATURATION``).
 
         The values are 3-tuples indexed by directions
-        (``ImageCms.Direction.INPUT``, ``ImageCms.Direction.OUTPUT``,
-        ``ImageCms.Direction.PROOF``).
+        (``ImageCms.DIRECTION_INPUT``, ``ImageCms.DIRECTION_OUTPUT``,
+        ``ImageCms.DIRECTION_PROOF``).
 
         The elements of the tuple are booleans.  If the value is ``True``,
         that intent is supported for that direction.
+
+    .. py:attribute:: color_space
+        :type: str
+
+        Deprecated but retained for backwards compatibility.
+        Interpreted value of :py:attr:`.xcolor_space`.  May be the
+        empty string if value could not be decoded.
+
+    .. py:attribute:: pcs
+        :type: str
+
+        Deprecated but retained for backwards compatibility.
+        Interpreted value of :py:attr:`.connection_space`.  May be
+        the empty string if value could not be decoded.
+
+    .. py:attribute:: product_model
+        :type: str
+
+        Deprecated but retained for backwards compatibility.
+        ASCII-encoded value of :py:attr:`.model`.
+
+    .. py:attribute:: product_manufacturer
+        :type: str
+
+        Deprecated but retained for backwards compatibility.
+        ASCII-encoded value of :py:attr:`.manufacturer`.
+
+    .. py:attribute:: product_copyright
+        :type: str
+
+        Deprecated but retained for backwards compatibility.
+        ASCII-encoded value of :py:attr:`.copyright`.
+
+    .. py:attribute:: product_description
+        :type: str
+
+        Deprecated but retained for backwards compatibility.
+        ASCII-encoded value of :py:attr:`.profile_description`.
+
+    .. py:attribute:: product_desc
+        :type: str
+
+        Deprecated but retained for backwards compatibility.
+        ASCII-encoded value of :py:attr:`.profile_description`.
+
+        This alias of :py:attr:`.product_description` used to
+        contain a derived informative string about the profile,
+        depending on the value of the description, copyright,
+        manufacturer and model fields).
 
     There is one function defined on the class:
 
@@ -352,11 +408,11 @@ can be easily displayed in a chromaticity diagram, for example).
         Note that you can also get this information for all intents and directions
         with :py:attr:`.intent_supported`.
 
-        :param intent: One of ``ImageCms.Intent.ABSOLUTE_COLORIMETRIC``,
-               ``ImageCms.Intent.PERCEPTUAL``,
-               ``ImageCms.Intent.RELATIVE_COLORIMETRIC``
-               and ``ImageCms.Intent.SATURATION``.
-        :param direction: One of ``ImageCms.Direction.INPUT``,
-                  ``ImageCms.Direction.OUTPUT``
-                  and ``ImageCms.Direction.PROOF``
+        :param intent: One of ``ImageCms.INTENT_ABSOLUTE_COLORIMETRIC``,
+               ``ImageCms.INTENT_PERCEPTUAL``,
+               ``ImageCms.INTENT_RELATIVE_COLORIMETRIC``
+               and ``ImageCms.INTENT_SATURATION``.
+        :param direction: One of ``ImageCms.DIRECTION_INPUT``,
+                  ``ImageCms.DIRECTION_OUTPUT``
+                  and ``ImageCms.DIRECTION_PROOF``
         :return: Boolean if the intent and direction is supported.

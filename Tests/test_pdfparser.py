@@ -1,7 +1,6 @@
 import time
 
 import pytest
-
 from PIL.PdfParser import (
     IndirectObjectDef,
     IndirectReference,
@@ -88,8 +87,9 @@ def test_parsing():
             b"D:20180729214124+08'00'": "20180729134124",
             b"D:20180729214124-05'00'": "20180730024124",
         }.items():
-            b = b"<</" + name.encode() + b" (" + date + b")>>"
-            d = PdfParser.get_value(b, 0)[0]
+            d = PdfParser.get_value(b"<</" + name.encode() + b" (" + date + b")>>", 0)[
+                0
+            ]
             assert time.strftime("%Y%m%d%H%M%S", getattr(d, name)) == value
 
 
@@ -114,12 +114,6 @@ def test_pdf_repr():
     assert pdf_repr(True) == b"true"
     assert pdf_repr(False) == b"false"
     assert pdf_repr(None) == b"null"
-    assert pdf_repr(b"a)/b\\(c") == rb"(a\)/b\\\(c)"
+    assert pdf_repr(b"a)/b\\(c") == br"(a\)/b\\\(c)"
     assert pdf_repr([123, True, {"a": PdfName(b"b")}]) == b"[ 123 true <<\n/a /b\n>> ]"
     assert pdf_repr(PdfBinary(b"\x90\x1F\xA0")) == b"<901FA0>"
-
-
-def test_duplicate_xref_entry():
-    pdf = PdfParser("Tests/images/duplicate_xref_entry.pdf")
-    assert pdf.xref_table.existing_entries[6][0] == 1197
-    pdf.close()

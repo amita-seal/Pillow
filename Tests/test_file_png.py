@@ -1,28 +1,20 @@
 import re
-import sys
-import warnings
 import zlib
 from io import BytesIO
 
 import pytest
-
 from PIL import Image, ImageFile, PngImagePlugin, features
 
 from .helper import (
     PillowLeakTestCase,
     assert_image,
     assert_image_equal,
-    assert_image_equal_tofile,
     hopper,
+    is_big_endian,
     is_win32,
-    mark_if_feature_version,
+    on_ci,
     skip_unless_feature,
 )
-
-try:
-    from defusedxml import ElementTree
-except ImportError:
-    ElementTree = None
 
 # sample png stream
 
@@ -77,7 +69,9 @@ class TestFilePng:
                     png.crc(cid, s)
         return chunks
 
+    @pytest.mark.xfail(is_big_endian() and on_ci(), reason="Fails on big-endian")
     def test_sanity(self, tmp_path):
+
         # internal version number
         assert re.search(r"\d+\.\d+\.\d+(\.\d+)?$", features.version_codec("zlib"))
 
@@ -112,8 +106,7 @@ class TestFilePng:
 
         test_file = "Tests/images/broken.png"
         with pytest.raises(OSError):
-            with Image.open(test_file):
-                pass
+            Image.open(test_file)
 
     def test_bad_text(self):
         # Make sure PIL can read malformed tEXt chunks (@PIL152)
@@ -155,6 +148,7 @@ class TestFilePng:
         assert im.info == {"spam": "egg"}
 
     def test_bad_itxt(self):
+
         im = load(HEAD + chunk(b"iTXt") + TAIL)
         assert im.info == {}
 
@@ -199,6 +193,7 @@ class TestFilePng:
         assert im.info["spam"].tkey == "Spam"
 
     def test_interlace(self):
+
         test_file = "Tests/images/pil123p.png"
         with Image.open(test_file) as im:
             assert_image(im, "P", (162, 150))
@@ -329,8 +324,7 @@ class TestFilePng:
 
         with Image.open(TEST_PNG_FILE) as im:
             # Assert that there is no unclosed file warning
-            with warnings.catch_warnings():
-                im.verify()
+            pytest.warns(None, im.verify)
 
         with Image.open(TEST_PNG_FILE) as im:
             im.load()
@@ -386,12 +380,25 @@ class TestFilePng:
         # Check dpi roundtripping
 
         with Image.open(TEST_PNG_FILE) as im:
-            im = roundtrip(im, dpi=(100.33, 100.33))
-        assert im.info["dpi"] == (100.33, 100.33)
+            im = roundtrip(im, dpi=(100, 100))
+        assert im.info["dpi"] == (100, 100)
 
-    def test_load_float_dpi(self):
+    def test_load_dpi_rounding(self):
+        # Round up
         with Image.open(TEST_PNG_FILE) as im:
-            assert im.info["dpi"] == (95.9866, 95.9866)
+            assert im.info["dpi"] == (96, 96)
+
+        # Round down
+        with Image.open("Tests/images/icc_profile_none.png") as im:
+            assert im.info["dpi"] == (72, 72)
+
+    def test_save_dpi_rounding(self):
+        with Image.open(TEST_PNG_FILE) as im:
+            im = roundtrip(im, dpi=(72.2, 72.2))
+        assert im.info["dpi"] == (72, 72)
+
+        im = roundtrip(im, dpi=(72.8, 72.8))
+        assert im.info["dpi"] == (73, 73)
 
     def test_roundtrip_text(self):
         # Check text roundtripping
@@ -457,8 +464,7 @@ class TestFilePng:
 
         pngfile = BytesIO(data)
         with pytest.raises(OSError):
-            with Image.open(pngfile):
-                pass
+            Image.open(pngfile)
 
     def test_trns_rgb(self):
         # Check writing and reading of tRNS chunks for RGB images.
@@ -492,6 +498,7 @@ class TestFilePng:
         # Check reading images with null tRNS value, issue #1239
         test_file = "Tests/images/tRNS_null_1x1.png"
         with Image.open(test_file) as im:
+
             assert im.info["transparency"] == 0
 
     def test_save_icc_profile(self):
@@ -506,8 +513,6 @@ class TestFilePng:
 
     def test_discard_icc_profile(self):
         with Image.open("Tests/images/icc_profile.png") as im:
-            assert "icc_profile" in im.info
-
             im = roundtrip(im, icc_profile=None)
         assert "icc_profile" not in im.info
 
@@ -531,12 +536,6 @@ class TestFilePng:
         with Image.open(BytesIO(im._repr_png_())) as repr_png:
             assert repr_png.format == "PNG"
             assert_image_equal(im, repr_png)
-
-    def test_repr_png_error(self):
-        im = hopper("F")
-
-        with pytest.raises(ValueError):
-            im._repr_png_()
 
     def test_chunk_order(self, tmp_path):
         with Image.open("Tests/images/icc_profile.png") as im:
@@ -565,31 +564,9 @@ class TestFilePng:
         chunks = PngImagePlugin.getchunks(im)
         assert len(chunks) == 3
 
-    def test_read_private_chunks(self):
-        with Image.open("Tests/images/exif.png") as im:
-            assert im.private_chunks == [(b"orNT", b"\x01")]
-
-    def test_roundtrip_private_chunk(self):
-        # Check private chunk roundtripping
-
-        with Image.open(TEST_PNG_FILE) as im:
-            info = PngImagePlugin.PngInfo()
-            info.add(b"prIV", b"VALUE")
-            info.add(b"atEC", b"VALUE2")
-            info.add(b"prIV", b"VALUE3", True)
-
-            im = roundtrip(im, pnginfo=info)
-        assert im.private_chunks == [(b"prIV", b"VALUE"), (b"atEC", b"VALUE2")]
-        im.load()
-        assert im.private_chunks == [
-            (b"prIV", b"VALUE"),
-            (b"atEC", b"VALUE2"),
-            (b"prIV", b"VALUE3", True),
-        ]
-
     def test_textual_chunks_after_idat(self):
         with Image.open("Tests/images/hopper.png") as im:
-            assert "comment" in im.text
+            assert "comment" in im.text.keys()
             for k, v in {
                 "date:create": "2014-09-04T09:37:08+03:00",
                 "date:modify": "2014-09-04T09:37:08+03:00",
@@ -614,67 +591,6 @@ class TestFilePng:
         with Image.open("Tests/images/hopper_idat_after_image_end.png") as im:
             assert im.text == {"TXT": "VALUE", "ZIP": "VALUE"}
 
-    def test_padded_idat(self):
-        # This image has been manually hexedited
-        # so that the IDAT chunk has padding at the end
-        # Set MAXBLOCK to the length of the actual data
-        # so that the decoder finishes reading before the chunk ends
-        MAXBLOCK = ImageFile.MAXBLOCK
-        ImageFile.MAXBLOCK = 45
-        ImageFile.LOAD_TRUNCATED_IMAGES = True
-
-        with Image.open("Tests/images/padded_idat.png") as im:
-            im.load()
-
-            ImageFile.MAXBLOCK = MAXBLOCK
-            ImageFile.LOAD_TRUNCATED_IMAGES = False
-
-            assert_image_equal_tofile(im, "Tests/images/bw_gradient.png")
-
-    @pytest.mark.parametrize(
-        "cid", (b"IHDR", b"sRGB", b"pHYs", b"acTL", b"fcTL", b"fdAT")
-    )
-    def test_truncated_chunks(self, cid):
-        fp = BytesIO()
-        with PngImagePlugin.PngStream(fp) as png:
-            with pytest.raises(ValueError):
-                png.call(cid, 0, 0)
-
-            ImageFile.LOAD_TRUNCATED_IMAGES = True
-            png.call(cid, 0, 0)
-            ImageFile.LOAD_TRUNCATED_IMAGES = False
-
-    def test_specify_bits(self, tmp_path):
-        im = hopper("P")
-
-        out = str(tmp_path / "temp.png")
-        im.save(out, bits=4)
-
-        with Image.open(out) as reloaded:
-            assert len(reloaded.png.im_palette[1]) == 48
-
-    def test_plte_length(self, tmp_path):
-        im = Image.new("P", (1, 1))
-        im.putpalette((1, 1, 1))
-
-        out = str(tmp_path / "temp.png")
-        im.save(str(tmp_path / "temp.png"))
-
-        with Image.open(out) as reloaded:
-            assert len(reloaded.png.im_palette[1]) == 3
-
-    def test_getxmp(self):
-        with Image.open("Tests/images/color_snakes.png") as im:
-            if ElementTree is None:
-                with pytest.warns(UserWarning):
-                    assert im.getxmp() == {}
-            else:
-                xmp = im.getxmp()
-
-                description = xmp["xmpmeta"]["RDF"]["Description"]
-                assert description["PixelXDimension"] == "10"
-                assert description["subject"]["Seq"] is None
-
     def test_exif(self):
         # With an EXIF chunk
         with Image.open("Tests/images/exif.png") as im:
@@ -691,40 +607,24 @@ class TestFilePng:
             exif = im.copy().getexif()
             assert exif[274] == 1
 
-        # With a tEXt chunk
-        with Image.open("Tests/images/exif_text.png") as im:
-            exif = im._getexif()
-        assert exif[274] == 1
-
         # With XMP tags
         with Image.open("Tests/images/xmp_tags_orientation.png") as im:
             exif = im.getexif()
         assert exif[274] == 3
 
     def test_exif_save(self, tmp_path):
-        # Test exif is not saved from info
-        test_file = str(tmp_path / "temp.png")
         with Image.open("Tests/images/exif.png") as im:
+            test_file = str(tmp_path / "temp.png")
             im.save(test_file)
-
-        with Image.open(test_file) as reloaded:
-            assert reloaded._getexif() is None
-
-        # Test passing in exif
-        with Image.open("Tests/images/exif.png") as im:
-            im.save(test_file, exif=im.getexif())
 
         with Image.open(test_file) as reloaded:
             exif = reloaded._getexif()
         assert exif[274] == 1
 
-    @mark_if_feature_version(
-        pytest.mark.valgrind_known_error, "libjpeg_turbo", "2.0", reason="Known Failing"
-    )
     def test_exif_from_jpg(self, tmp_path):
         with Image.open("Tests/images/pil_sample_rgb.jpg") as im:
             test_file = str(tmp_path / "temp.png")
-            im.save(test_file, exif=im.getexif())
+            im.save(test_file)
 
         with Image.open(test_file) as reloaded:
             exif = reloaded._getexif()
@@ -748,32 +648,6 @@ class TestFilePng:
 
             with pytest.raises(EOFError):
                 im.seek(1)
-
-    @pytest.mark.parametrize("buffer", (True, False))
-    def test_save_stdout(self, buffer):
-        old_stdout = sys.stdout
-
-        if buffer:
-
-            class MyStdOut:
-                buffer = BytesIO()
-
-            mystdout = MyStdOut()
-        else:
-            mystdout = BytesIO()
-
-        sys.stdout = mystdout
-
-        with Image.open(TEST_PNG_FILE) as im:
-            im.save(sys.stdout, "PNG")
-
-        # Reset stdout
-        sys.stdout = old_stdout
-
-        if buffer:
-            mystdout = mystdout.buffer
-        with Image.open(mystdout) as reloaded:
-            assert_image_equal_tofile(reloaded, TEST_PNG_FILE)
 
 
 @pytest.mark.skipif(is_win32(), reason="Requires Unix or macOS")

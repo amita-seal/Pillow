@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 
 from PIL import Image
 
@@ -61,8 +61,8 @@ repro_copy = (
 
 
 for path in repro_ss2 + repro_lc + repro_advance + repro_brun + repro_copy:
-    with Image.open(path) as im:
-        try:
-            im.load()
-        except Exception as msg:
-            print(msg)
+    im = Image.open(path)
+    try:
+        im.load()
+    except Exception as msg:
+        print(msg)

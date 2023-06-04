@@ -1,5 +1,3 @@
-import pytest
-
 from PIL import Image, ImageEnhance
 
 from .helper import assert_image_equal, hopper
@@ -37,21 +35,21 @@ def _check_alpha(im, original, op, amount):
     assert_image_equal(
         im.getchannel("A"),
         original.getchannel("A"),
-        f"Diff on {op}: {amount}",
+        "Diff on {}: {}".format(op, amount),
     )
 
 
-@pytest.mark.parametrize("op", ("Color", "Brightness", "Contrast", "Sharpness"))
-def test_alpha(op):
+def test_alpha():
     # Issue https://github.com/python-pillow/Pillow/issues/899
     # Is alpha preserved through image enhancement?
 
     original = _half_transparent_image()
 
-    for amount in [0, 0.5, 1.0]:
-        _check_alpha(
-            getattr(ImageEnhance, op)(original).enhance(amount),
-            original,
-            op,
-            amount,
-        )
+    for op in ["Color", "Brightness", "Contrast", "Sharpness"]:
+        for amount in [0, 0.5, 1.0]:
+            _check_alpha(
+                getattr(ImageEnhance, op)(original).enhance(amount),
+                original,
+                op,
+                amount,
+            )

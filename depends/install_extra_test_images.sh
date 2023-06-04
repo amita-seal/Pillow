@@ -1,12 +1,15 @@
-#!/usr/bin/env bash
+#!/bin/bash
 # install extra test images
 
-archive=test-images-main
+# Use SVN to just fetch a single Git subdirectory
+svn_export()
+{
+    if [ ! -z $1 ]; then
+        echo ""
+        echo "Retrying svn export..."
+        echo ""
+    fi
 
-./download-and-extract.sh $archive https://github.com/python-pillow/test-images/archive/main.tar.gz
-
-mv $archive/* ../Tests/images/
-
-# Cleanup old tarball and empty directory
-rm $archive.tar.gz
-rmdir $archive
+    svn export --force https://github.com/python-pillow/pillow-depends/trunk/test_images ../Tests/images
+}
+svn_export || svn_export retry || svn_export retry || svn_export retry

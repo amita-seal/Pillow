@@ -1,62 +1,43 @@
 repos:
   - repo: https://github.com/psf/black
-    rev: 23.3.0
+    rev: 6bedb5c58a7d8c25aa9509f8217bc24e9797e90d  # frozen: 19.10b0
     hooks:
       - id: black
-        args: [--target-version=py38]
+        args: ["--target-version", "py35"]
+        # Only .py files, until https://github.com/psf/black/issues/402 resolved
+        files: \.py$
+        types: []
 
-  - repo: https://github.com/PyCQA/isort
-    rev: 5.12.0
+  - repo: https://github.com/timothycrosley/isort
+    rev: 7c29dd9d55161704cfc45998c6f5c2c43d39264b  # frozen: 4.3.21
     hooks:
       - id: isort
 
-  - repo: https://github.com/PyCQA/bandit
-    rev: 1.7.5
-    hooks:
-    - id: bandit
-      args: [--severity-level=high]
-      files: ^src/
-
   - repo: https://github.com/asottile/yesqa
-    rev: v1.4.0
+    rev: b13a51aa54142c59219c764e9f9362c049b439ed  # frozen: v1.2.0
     hooks:
       - id: yesqa
 
   - repo: https://github.com/Lucas-C/pre-commit-hooks
-    rev: v1.5.1
+    rev: ffbd448645bad2e7ca13f96fca5830058d27ccd5  # frozen: v1.1.7
     hooks:
       - id: remove-tabs
-        exclude: (Makefile$|\.bat$|\.cmake$|\.eps$|\.fits$|\.gd$|\.opt$)
+        exclude: (Makefile$|\.bat$|\.cmake$|\.eps$|\.fits$|\.opt$)
 
-  - repo: https://github.com/PyCQA/flake8
-    rev: 6.0.0
+  - repo: https://gitlab.com/pycqa/flake8
+    rev: 735cfe7e1c57a8e05f660ba75de72313005af54a  # frozen: 3.8.2
     hooks:
       - id: flake8
-        additional_dependencies:
-          [flake8-2020, flake8-errmsg, flake8-implicit-str-concat]
+        additional_dependencies: [flake8-2020, flake8-implicit-str-concat]
 
   - repo: https://github.com/pre-commit/pygrep-hooks
-    rev: v1.10.0
+    rev: 0d7d077d6ed5624854f93ac601739c1804ebeb98  # frozen: v1.5.1
     hooks:
       - id: python-check-blanket-noqa
       - id: rst-backticks
 
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.4.0
+    rev: ebc15addedad713c86ef18ae9632c88e187dd0af  # frozen: v3.1.0
     hooks:
       - id: check-merge-conflict
-      - id: check-json
       - id: check-yaml
-
-  - repo: https://github.com/sphinx-contrib/sphinx-lint
-    rev: v0.6.7
-    hooks:
-      - id: sphinx-lint
-
-  - repo: https://github.com/tox-dev/tox-ini-fmt
-    rev: 1.3.0
-    hooks:
-      - id: tox-ini-fmt
-
-ci:
-  autoupdate_schedule: monthly

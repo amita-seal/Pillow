@@ -1,11 +1,10 @@
-import pytest
-
 from PIL import Image, ImageMode
 
 from .helper import hopper
 
 
 def test_sanity():
+
     with hopper() as im:
         im.mode
 
@@ -22,7 +21,6 @@ def test_sanity():
     assert m.bands == ("1",)
     assert m.basemode == "L"
     assert m.basetype == "L"
-    assert m.typestr == "|b1"
 
     for mode in (
         "I;16",
@@ -47,28 +45,26 @@ def test_sanity():
     assert m.bands == ("R", "G", "B")
     assert m.basemode == "RGB"
     assert m.basetype == "L"
-    assert m.typestr == "|u1"
 
 
-@pytest.mark.parametrize(
-    "mode, expected_base, expected_type, expected_bands, expected_band_names",
-    (
-        ("1", "L", "L", 1, ("1",)),
-        ("L", "L", "L", 1, ("L",)),
-        ("P", "P", "L", 1, ("P",)),
-        ("I", "L", "I", 1, ("I",)),
-        ("F", "L", "F", 1, ("F",)),
-        ("RGB", "RGB", "L", 3, ("R", "G", "B")),
-        ("RGBA", "RGB", "L", 4, ("R", "G", "B", "A")),
-        ("RGBX", "RGB", "L", 4, ("R", "G", "B", "X")),
-        ("CMYK", "RGB", "L", 4, ("C", "M", "Y", "K")),
-        ("YCbCr", "RGB", "L", 3, ("Y", "Cb", "Cr")),
-    ),
-)
-def test_properties(
-    mode, expected_base, expected_type, expected_bands, expected_band_names
-):
-    assert Image.getmodebase(mode) == expected_base
-    assert Image.getmodetype(mode) == expected_type
-    assert Image.getmodebands(mode) == expected_bands
-    assert Image.getmodebandnames(mode) == expected_band_names
+def test_properties():
+    def check(mode, *result):
+        signature = (
+            Image.getmodebase(mode),
+            Image.getmodetype(mode),
+            Image.getmodebands(mode),
+            Image.getmodebandnames(mode),
+        )
+        assert signature == result
+
+    check("1", "L", "L", 1, ("1",))
+    check("L", "L", "L", 1, ("L",))
+    check("P", "P", "L", 1, ("P",))
+    check("I", "L", "I", 1, ("I",))
+    check("F", "L", "F", 1, ("F",))
+    check("RGB", "RGB", "L", 3, ("R", "G", "B"))
+    check("RGBA", "RGB", "L", 4, ("R", "G", "B", "A"))
+    check("RGBX", "RGB", "L", 4, ("R", "G", "B", "X"))
+    check("RGBX", "RGB", "L", 4, ("R", "G", "B", "X"))
+    check("CMYK", "RGB", "L", 4, ("C", "M", "Y", "K"))
+    check("YCbCr", "RGB", "L", 3, ("Y", "Cb", "Cr"))

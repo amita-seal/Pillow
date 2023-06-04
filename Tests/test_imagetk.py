@@ -1,13 +1,12 @@
 import pytest
-
 from PIL import Image
 
 from .helper import assert_image_equal, hopper
 
 try:
-    import tkinter as tk
-
     from PIL import ImageTk
+
+    import tkinter as tk
 
     dir(ImageTk)
     HAS_TK = True
@@ -26,10 +25,8 @@ def setup_module():
         # setup tk
         tk.Frame()
         # root = tk.Tk()
-    except RuntimeError as v:
-        pytest.skip(f"RuntimeError: {v}")
     except tk.TclError as v:
-        pytest.skip(f"TCL Error: {v}")
+        pytest.skip("TCL Error: %s" % v)
 
 
 def test_kw():
@@ -54,39 +51,31 @@ def test_kw():
     assert im is None
 
 
-@pytest.mark.parametrize("mode", TK_MODES)
-def test_photoimage(mode):
-    # test as image:
-    im = hopper(mode)
+def test_photoimage():
+    for mode in TK_MODES:
+        # test as image:
+        im = hopper(mode)
 
-    # this should not crash
-    im_tk = ImageTk.PhotoImage(im)
-
-    assert im_tk.width() == im.width
-    assert im_tk.height() == im.height
-
-    reloaded = ImageTk.getimage(im_tk)
-    assert_image_equal(reloaded, im.convert("RGBA"))
-
-
-def test_photoimage_apply_transparency():
-    with Image.open("Tests/images/pil123p.png") as im:
+        # this should not crash
         im_tk = ImageTk.PhotoImage(im)
+
+        assert im_tk.width() == im.width
+        assert im_tk.height() == im.height
+
         reloaded = ImageTk.getimage(im_tk)
         assert_image_equal(reloaded, im.convert("RGBA"))
 
 
-@pytest.mark.parametrize("mode", TK_MODES)
-def test_photoimage_blank(mode):
+def test_photoimage_blank():
     # test a image using mode/size:
-    im_tk = ImageTk.PhotoImage(mode, (100, 100))
+    for mode in TK_MODES:
+        im_tk = ImageTk.PhotoImage(mode, (100, 100))
 
-    assert im_tk.width() == 100
-    assert im_tk.height() == 100
+        assert im_tk.width() == 100
+        assert im_tk.height() == 100
 
-    im = Image.new(mode, (100, 100))
-    reloaded = ImageTk.getimage(im_tk)
-    assert_image_equal(reloaded.convert(mode), im)
+        # reloaded = ImageTk.getimage(im_tk)
+        # assert_image_equal(reloaded, im)
 
 
 def test_bitmapimage():

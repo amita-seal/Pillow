@@ -1,18 +1,20 @@
 import pytest
-
 from PIL import Image, WmfImagePlugin
 
-from .helper import assert_image_similar_tofile, hopper
+from .helper import assert_image_similar, hopper
 
 
 def test_load_raw():
+
     # Test basic EMF open and rendering
     with Image.open("Tests/images/drawing.emf") as im:
         if hasattr(Image.core, "drawwmf"):
             # Currently, support for WMF/EMF is Windows-only
             im.load()
             # Compare to reference rendering
-            assert_image_similar_tofile(im, "Tests/images/drawing_emf_ref.png", 0)
+            with Image.open("Tests/images/drawing_emf_ref.png") as imref:
+                imref.load()
+                assert_image_similar(im, imref, 0)
 
     # Test basic WMF open and rendering
     with Image.open("Tests/images/drawing.wmf") as im:
@@ -20,13 +22,9 @@ def test_load_raw():
             # Currently, support for WMF/EMF is Windows-only
             im.load()
             # Compare to reference rendering
-            assert_image_similar_tofile(im, "Tests/images/drawing_wmf_ref.png", 2.0)
-
-
-def test_load():
-    with Image.open("Tests/images/drawing.emf") as im:
-        if hasattr(Image.core, "drawwmf"):
-            assert im.load()[0, 0] == (255, 255, 255)
+            with Image.open("Tests/images/drawing_wmf_ref.png") as imref:
+                imref.load()
+                assert_image_similar(im, imref, 2.0)
 
 
 def test_register_handler(tmp_path):
@@ -49,9 +47,14 @@ def test_register_handler(tmp_path):
     WmfImagePlugin.register_handler(original_handler)
 
 
-def test_load_float_dpi():
+def test_load_dpi_rounding():
+    # Round up
     with Image.open("Tests/images/drawing.emf") as im:
-        assert im.info["dpi"] == 1423.7668161434979
+        assert im.info["dpi"] == 1424
+
+    # Round down
+    with Image.open("Tests/images/drawing_roundDown.emf") as im:
+        assert im.info["dpi"] == 1426
 
 
 def test_load_set_dpi():
@@ -62,13 +65,14 @@ def test_load_set_dpi():
             im.load(144)
             assert im.size == (164, 164)
 
-            assert_image_similar_tofile(im, "Tests/images/drawing_wmf_ref_144.png", 2.1)
+            with Image.open("Tests/images/drawing_wmf_ref_144.png") as expected:
+                assert_image_similar(im, expected, 2.1)
 
 
-@pytest.mark.parametrize("ext", (".wmf", ".emf"))
-def test_save(ext, tmp_path):
+def test_save(tmp_path):
     im = hopper()
 
-    tmpfile = str(tmp_path / ("temp" + ext))
-    with pytest.raises(OSError):
-        im.save(tmpfile)
+    for ext in [".wmf", ".emf"]:
+        tmpfile = str(tmp_path / ("temp" + ext))
+        with pytest.raises(OSError):
+            im.save(tmpfile)

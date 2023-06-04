@@ -1,48 +1,51 @@
 name: Lint
 
-on: [push, pull_request, workflow_dispatch]
-
-permissions:
-  contents: read
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+on: [push, pull_request]
 
 jobs:
   build:
 
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.8"]
 
-    name: Lint
+    name: Python ${{ matrix.python-version }}
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v2
+
+    - name: pip cache
+      uses: actions/cache@v2
+      with:
+        path: ~/.cache/pip
+        key: lint-pip-${{ hashFiles('**/setup.py') }}
+        restore-keys: |
+          lint-pip-
 
     - name: pre-commit cache
-      uses: actions/cache@v3
+      uses: actions/cache@v1
       with:
         path: ~/.cache/pre-commit
         key: lint-pre-commit-${{ hashFiles('**/.pre-commit-config.yaml') }}
         restore-keys: |
           lint-pre-commit-
 
-    - name: Set up Python
-      uses: actions/setup-python@v4
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v1
       with:
-        python-version: "3.x"
-        cache: pip
-        cache-dependency-path: "setup.py"
+        python-version: ${{ matrix.python-version }}
 
     - name: Build system information
-      run: python3 .github/workflows/system-info.py
+      run: python .github/workflows/system-info.py
 
     - name: Install dependencies
       run: |
-        python3 -m pip install -U pip
-        python3 -m pip install -U tox
+        python -m pip install --upgrade pip
+        python -m pip install --upgrade tox
 
     - name: Lint
       run: tox -e lint
       env:
         PRE_COMMIT_COLOR: always
+

@@ -1,18 +1,20 @@
 import pytest
-
 from PIL import Image
 
 from .helper import assert_image_equal, hopper
 
 
-@pytest.mark.parametrize("mode", ("1", "P", "L", "RGB", "I", "F"))
-def test_crop(mode):
-    im = hopper(mode)
-    assert_image_equal(im.crop(), im)
+def test_crop():
+    def crop(mode):
+        im = hopper(mode)
+        assert_image_equal(im.crop(), im)
 
-    cropped = im.crop((50, 50, 100, 100))
-    assert cropped.mode == mode
-    assert cropped.size == (50, 50)
+        cropped = im.crop((50, 50, 100, 100))
+        assert cropped.mode == mode
+        assert cropped.size == (50, 50)
+
+    for mode in "1", "P", "L", "RGB", "I", "F":
+        crop(mode)
 
 
 def test_wide_crop():
@@ -44,12 +46,16 @@ def test_wide_crop():
     assert crop(-25, 75, 25, 125) == (1875, 625)
 
 
-@pytest.mark.parametrize("box", ((8, 2, 2, 8), (2, 8, 8, 2), (8, 8, 2, 2)))
-def test_negative_crop(box):
-    im = Image.new("RGB", (10, 10))
+def test_negative_crop():
+    # Check negative crop size (@PIL171)
 
-    with pytest.raises(ValueError):
-        im.crop(box)
+    im = Image.new("L", (512, 512))
+    im = im.crop((400, 400, 200, 200))
+
+    assert im.size == (0, 0)
+    assert len(im.getdata()) == 0
+    with pytest.raises(IndexError):
+        im.getdata()[0]
 
 
 def test_crop_float():
@@ -86,6 +92,7 @@ def test_crop_crash():
 
 
 def test_crop_zero():
+
     im = Image.new("RGB", (0, 0), "white")
 
     cropped = im.crop((0, 0, 0, 0))

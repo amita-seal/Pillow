@@ -1,9 +1,19 @@
 #!/bin/bash
 
 # gather the coverage data
-python3 -m pip install coverage
+pip3 install codecov
 if [[ $MATRIX_DOCKER ]]; then
-  python3 -m coverage xml --ignore-errors
+  coverage xml --ignore-errors
 else
-  python3 -m coverage xml
+  coverage xml
+fi
+
+if [[ $TRAVIS ]]; then
+    codecov --flags TravisCI
+fi
+
+if [ "$TRAVIS_PYTHON_VERSION" == "3.8" ]; then
+    # Coverage and quality reports on just the latest diff.
+    depends/diffcover-install.sh
+    depends/diffcover-run.sh
 fi

@@ -5,5 +5,4 @@ from io import BytesIO
 
 from PIL import Image
 
-with Image.open(BytesIO(b"icns\x00\x00\x00\x10hang\x00\x00\x00\x00")):
-    pass
+Image.open(BytesIO(b"icns\x00\x00\x00\x10hang\x00\x00\x00\x00"))

@@ -7,6 +7,7 @@ from .helper import hopper
 
 
 def _test_equal(num, denom, target):
+
     t = IFDRational(num, denom)
 
     assert target == t
@@ -14,6 +15,7 @@ def _test_equal(num, denom, target):
 
 
 def test_sanity():
+
     _test_equal(1, 1, 1)
     _test_equal(1, 1, Fraction(1, 1))
 
@@ -25,14 +27,6 @@ def test_sanity():
 
     _test_equal(1, 2, Fraction(1, 2))
     _test_equal(1, 2, IFDRational(1, 2))
-
-    _test_equal(7, 5, 1.4)
-
-
-def test_ranges():
-    for num in range(1, 10):
-        for denom in range(1, 10):
-            assert IFDRational(num, denom) == IFDRational(num, denom)
 
 
 def test_nonetype():

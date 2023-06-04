@@ -1,5 +1,4 @@
 import pytest
-
 from PIL import Image, ImageFilter
 
 sample = Image.new("L", (7, 5))
@@ -25,7 +24,7 @@ def box_blur(image, radius=1, n=1):
     return image._new(image.im.box_blur(radius, n))
 
 
-def assert_image(im, data, delta=0):
+def assertImage(im, data, delta=0):
     it = iter(im.getdata())
     for data_row in data:
         im_row = [next(it) for _ in range(im.size[0])]
@@ -35,12 +34,12 @@ def assert_image(im, data, delta=0):
         next(it)
 
 
-def assert_blur(im, radius, data, passes=1, delta=0):
+def assertBlur(im, radius, data, passes=1, delta=0):
     # check grayscale image
-    assert_image(box_blur(im, radius, passes), data, delta)
+    assertImage(box_blur(im, radius, passes), data, delta)
     rgba = Image.merge("RGBA", (im, im, im, im))
     for band in box_blur(rgba, radius, passes).split():
-        assert_image(band, data, delta)
+        assertImage(band, data, delta)
 
 
 def test_color_modes():
@@ -64,7 +63,7 @@ def test_color_modes():
 
 
 def test_radius_0():
-    assert_blur(
+    assertBlur(
         sample,
         0,
         [
@@ -80,7 +79,7 @@ def test_radius_0():
 
 
 def test_radius_0_02():
-    assert_blur(
+    assertBlur(
         sample,
         0.02,
         [
@@ -97,7 +96,7 @@ def test_radius_0_02():
 
 
 def test_radius_0_05():
-    assert_blur(
+    assertBlur(
         sample,
         0.05,
         [
@@ -114,7 +113,7 @@ def test_radius_0_05():
 
 
 def test_radius_0_1():
-    assert_blur(
+    assertBlur(
         sample,
         0.1,
         [
@@ -131,7 +130,7 @@ def test_radius_0_1():
 
 
 def test_radius_0_5():
-    assert_blur(
+    assertBlur(
         sample,
         0.5,
         [
@@ -148,7 +147,7 @@ def test_radius_0_5():
 
 
 def test_radius_1():
-    assert_blur(
+    assertBlur(
         sample,
         1,
         [
@@ -165,7 +164,7 @@ def test_radius_1():
 
 
 def test_radius_1_5():
-    assert_blur(
+    assertBlur(
         sample,
         1.5,
         [
@@ -182,7 +181,7 @@ def test_radius_1_5():
 
 
 def test_radius_bigger_then_half():
-    assert_blur(
+    assertBlur(
         sample,
         3,
         [
@@ -199,7 +198,7 @@ def test_radius_bigger_then_half():
 
 
 def test_radius_bigger_then_width():
-    assert_blur(
+    assertBlur(
         sample,
         10,
         [
@@ -214,7 +213,7 @@ def test_radius_bigger_then_width():
 
 
 def test_extreme_large_radius():
-    assert_blur(
+    assertBlur(
         sample,
         600,
         [
@@ -229,7 +228,7 @@ def test_extreme_large_radius():
 
 
 def test_two_passes():
-    assert_blur(
+    assertBlur(
         sample,
         1,
         [
@@ -247,7 +246,7 @@ def test_two_passes():
 
 
 def test_three_passes():
-    assert_blur(
+    assertBlur(
         sample,
         1,
         [

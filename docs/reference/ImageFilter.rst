@@ -11,7 +11,7 @@ filters, which can be be used with the :py:meth:`Image.filter()
 Example: Filter an image
 ------------------------
 
-::
+.. code-block:: python
 
     from PIL import ImageFilter
 
@@ -66,29 +66,3 @@ image enhancement filters:
 
 .. autoclass:: PIL.ImageFilter.ModeFilter
     :members:
-
-.. class:: Filter
-
-    An abstract mixin used for filtering images
-    (for use with :py:meth:`~PIL.Image.Image.filter`).
-
-    Implementors must provide the following method:
-
-    .. method:: filter(self, image)
-
-        Applies a filter to a single-band image, or a single band of an image.
-
-        :returns: A filtered copy of the image.
-
-.. class:: MultibandFilter
-
-    An abstract mixin used for filtering multi-band images
-    (for use with :py:meth:`~PIL.Image.Image.filter`).
-
-    Implementors must provide the following method:
-
-    .. method:: filter(self, image)
-
-        Applies a filter to a multi-band image.
-
-        :returns: A filtered copy of the image.

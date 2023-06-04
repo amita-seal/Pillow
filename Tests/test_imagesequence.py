@@ -1,11 +1,11 @@
 import pytest
-
 from PIL import Image, ImageSequence, TiffImagePlugin
 
 from .helper import assert_image_equal, hopper, skip_unless_feature
 
 
 def test_sanity(tmp_path):
+
     test_file = str(tmp_path / "temp.im")
 
     im = hopper("RGB")
@@ -64,21 +64,21 @@ def test_libtiff():
 
 def test_consecutive():
     with Image.open("Tests/images/multipage.tiff") as im:
-        first_frame = None
+        firstFrame = None
         for frame in ImageSequence.Iterator(im):
-            if first_frame is None:
-                first_frame = frame.copy()
+            if firstFrame is None:
+                firstFrame = frame.copy()
         for frame in ImageSequence.Iterator(im):
-            assert_image_equal(frame, first_frame)
+            assert_image_equal(frame, firstFrame)
             break
 
 
 def test_palette_mmap():
     # Using mmap in ImageFile can require to reload the palette.
     with Image.open("Tests/images/multipage-mmap.tiff") as im:
-        color1 = im.getpalette()[:3]
+        color1 = im.getpalette()[0:3]
         im.seek(0)
-        color2 = im.getpalette()[:3]
+        color2 = im.getpalette()[0:3]
         assert color1 == color2
 
 

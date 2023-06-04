@@ -1,13 +1,11 @@
 import os
-import shutil
 import subprocess
 import sys
 
 import pytest
-
 from PIL import Image, ImageGrab
 
-from .helper import assert_image_equal_tofile, skip_unless_feature
+from .helper import assert_image, assert_image_equal_tofile, skip_unless_feature
 
 
 class TestImageGrab:
@@ -15,28 +13,31 @@ class TestImageGrab:
         sys.platform not in ("win32", "darwin"), reason="requires Windows or macOS"
     )
     def test_grab(self):
-        ImageGrab.grab()
-        ImageGrab.grab(include_layered_windows=True)
-        ImageGrab.grab(all_screens=True)
+        for im in [
+            ImageGrab.grab(),
+            ImageGrab.grab(include_layered_windows=True),
+            ImageGrab.grab(all_screens=True),
+        ]:
+            assert_image(im, im.mode, im.size)
 
         im = ImageGrab.grab(bbox=(10, 20, 50, 80))
-        assert im.size == (40, 60)
+        assert_image(im, im.mode, (40, 60))
 
     @skip_unless_feature("xcb")
     def test_grab_x11(self):
         try:
             if sys.platform not in ("win32", "darwin"):
-                ImageGrab.grab()
+                im = ImageGrab.grab()
+                assert_image(im, im.mode, im.size)
 
-            ImageGrab.grab(xdisplay="")
+            im2 = ImageGrab.grab(xdisplay="")
+            assert_image(im2, im2.mode, im2.size)
         except OSError as e:
             pytest.skip(str(e))
 
     @pytest.mark.skipif(Image.core.HAVE_XCB, reason="tests missing XCB")
     def test_grab_no_xcb(self):
-        if sys.platform not in ("win32", "darwin") and not shutil.which(
-            "gnome-screenshot"
-        ):
+        if sys.platform not in ("win32", "darwin"):
             with pytest.raises(OSError) as e:
                 ImageGrab.grab()
             assert str(e.value).startswith("Pillow was built without XCB support")
@@ -64,16 +65,13 @@ $bmp = New-Object Drawing.Bitmap 200, 200
             )
             p.communicate()
         else:
-            if not shutil.which("wl-paste") and not shutil.which("xclip"):
-                with pytest.raises(
-                    NotImplementedError,
-                    match="wl-paste or xclip is required for"
-                    r" ImageGrab.grabclipboard\(\) on Linux",
-                ):
-                    ImageGrab.grabclipboard()
+            with pytest.raises(NotImplementedError) as e:
+                ImageGrab.grabclipboard()
+            assert str(e.value) == "ImageGrab.grabclipboard() is macOS and Windows only"
             return
 
-        ImageGrab.grabclipboard()
+        im = ImageGrab.grabclipboard()
+        assert_image(im, im.mode, im.size)
 
     @pytest.mark.skipif(sys.platform != "win32", reason="Windows only")
     def test_grabclipboard_file(self):
@@ -98,18 +96,3 @@ $ms = new-object System.IO.MemoryStream(, $bytes)
 
         im = ImageGrab.grabclipboard()
         assert_image_equal_tofile(im, "Tests/images/hopper.png")
-
-    @pytest.mark.skipif(
-        (
-            sys.platform != "linux"
-            or not all(shutil.which(cmd) for cmd in ("wl-paste", "wl-copy"))
-        ),
-        reason="Linux with wl-clipboard only",
-    )
-    @pytest.mark.parametrize("ext", ("gif", "png", "ico"))
-    def test_grabclipboard_wl_clipboard(self, ext):
-        image_path = "Tests/images/hopper." + ext
-        with open(image_path, "rb") as fp:
-            subprocess.call(["wl-copy"], stdin=fp)
-        im = ImageGrab.grabclipboard()
-        assert_image_equal_tofile(im, image_path)

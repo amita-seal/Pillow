@@ -1,22 +1,6 @@
 name: Test Docker
 
-on:
-  push:
-    paths-ignore:
-      - ".github/workflows/docs.yml"
-      - "docs/**"
-  pull_request:
-    paths-ignore:
-      - ".github/workflows/docs.yml"
-      - "docs/**"
-  workflow_dispatch:
-
-permissions:
-  contents: read
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+on: [push, pull_request]
 
 jobs:
   build:
@@ -26,46 +10,30 @@ jobs:
       fail-fast: false
       matrix:
         docker: [
-          # Run slower jobs first to give them a headstart and reduce waiting time
-          ubuntu-22.04-jammy-arm64v8,
-          ubuntu-22.04-jammy-ppc64le,
-          ubuntu-22.04-jammy-s390x,
-          # Then run the remainder
           alpine,
-          amazon-2-amd64,
-          amazon-2023-amd64,
           arch,
-          centos-7-amd64,
-          centos-stream-8-amd64,
-          centos-stream-9-amd64,
-          debian-11-bullseye-x86,
-          fedora-37-amd64,
-          fedora-38-amd64,
-          gentoo,
+          ubuntu-16.04-xenial-amd64,
+          ubuntu-18.04-bionic-amd64,
           ubuntu-20.04-focal-amd64,
-          ubuntu-22.04-jammy-amd64,
+          debian-9-stretch-x86,
+          debian-10-buster-x86,
+          centos-6-amd64,
+          centos-7-amd64,
+          centos-8-amd64,
+          amazon-1-amd64,
+          amazon-2-amd64,
+          fedora-31-amd64,
+          fedora-32-amd64,
         ]
-        dockerTag: [main]
-        include:
-          - docker: "ubuntu-22.04-jammy-arm64v8"
-            qemu-arch: "aarch64"
-          - docker: "ubuntu-22.04-jammy-ppc64le"
-            qemu-arch: "ppc64le"
-          - docker: "ubuntu-22.04-jammy-s390x"
-            qemu-arch: "s390x"
+        dockerTag: [master]
 
     name: ${{ matrix.docker }}
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v2
 
     - name: Build system information
-      run: python3 .github/workflows/system-info.py
-
-    - name: Set up QEMU
-      if: "matrix.qemu-arch"
-      run: |
-        docker run --rm --privileged aptman/qus -s -- -p ${{ matrix.qemu-arch }}
+      run: python .github/workflows/system-info.py
 
     - name: Docker pull
       run: |
@@ -91,18 +59,7 @@ jobs:
         MATRIX_DOCKER: ${{ matrix.docker }}
 
     - name: Upload coverage
-      uses: codecov/codecov-action@v3
+      uses: codecov/codecov-action@v1
       with:
         flags: GHA_Docker
         name: ${{ matrix.docker }}
-        gcov: true
-
-  success:
-    permissions:
-      contents: none
-    needs: build
-    runs-on: ubuntu-latest
-    name: Docker Test Successful
-    steps:
-      - name: Success
-        run: echo Docker Test Successful

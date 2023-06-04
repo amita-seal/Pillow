@@ -1,5 +1,4 @@
 import pytest
-
 from PIL import GdImageFile, UnidentifiedImageError
 
 TEST_GD_FILE = "Tests/images/hopper.gd"

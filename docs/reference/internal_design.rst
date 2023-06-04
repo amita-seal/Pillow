@@ -8,4 +8,3 @@ Internal Reference Docs
   limits
   block_allocator
   internal_modules
-  c_extension_debugging

@@ -2,19 +2,18 @@
 
 set -e
 
-brew install libtiff libjpeg openjpeg libimagequant webp little-cms2 freetype libraqm
+brew install libtiff libjpeg openjpeg libimagequant webp little-cms2 freetype openblas
 
-PYTHONOPTIMIZE=0 python3 -m pip install cffi
-python3 -m pip install coverage
-python3 -m pip install defusedxml
-python3 -m pip install olefile
-python3 -m pip install -U pytest
-python3 -m pip install -U pytest-cov
-python3 -m pip install -U pytest-timeout
-python3 -m pip install pyroma
+PYTHONOPTIMIZE=0 pip install cffi
+pip install coverage
+pip install olefile
+pip install -U pytest
+pip install -U pytest-cov
+pip install pyroma
+pip install test-image-results
 
-# TODO Remove condition when NumPy supports 3.12
-if ! [ "$GHA_PYTHON_VERSION" == "3.12-dev" ]; then python3 -m pip install numpy ; fi
+echo -e "[openblas]\nlibraries = openblas\nlibrary_dirs = /usr/local/opt/openblas/lib" >> ~/.numpy-site.cfg
+pip install numpy
 
 # extra test images
 pushd depends && ./install_extra_test_images.sh && popd

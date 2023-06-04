@@ -1,9 +1,9 @@
 import pytest
-
 from PIL import Image
 
 
 def test_setmode():
+
     im = Image.new("L", (1, 1), 255)
     im.im.setmode("1")
     assert im.im.getpixel((0, 0)) == 255

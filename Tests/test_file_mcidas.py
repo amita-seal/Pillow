@@ -1,8 +1,7 @@
 import pytest
-
 from PIL import Image, McIdasImagePlugin
 
-from .helper import assert_image_equal_tofile
+from .helper import assert_image_equal
 
 
 def test_invalid_file():
@@ -27,4 +26,5 @@ def test_valid_file():
         assert im.format == "MCIDAS"
         assert im.mode == "I"
         assert im.size == (1800, 400)
-        assert_image_equal_tofile(im, saved_file)
+        with Image.open(saved_file) as im2:
+            assert_image_equal(im, im2)

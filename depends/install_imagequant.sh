@@ -1,15 +1,14 @@
 #!/bin/bash
 # install libimagequant
 
-archive=libimagequant-4.2.0
+archive=libimagequant-2.12.6
 
-./download-and-extract.sh $archive https://raw.githubusercontent.com/python-pillow/pillow-depends/main/$archive.tar.gz
+./download-and-extract.sh $archive https://raw.githubusercontent.com/python-pillow/pillow-depends/master/$archive.tar.gz
 
-pushd $archive/imagequant-sys
+pushd $archive
 
-cargo install cargo-c
-cargo cinstall --prefix=/usr --destdir=.
-sudo cp usr/lib/libimagequant.so* /usr/lib/
-sudo cp usr/include/libimagequant.h /usr/include/
+make shared
+sudo cp libimagequant.so* /usr/lib/
+sudo cp libimagequant.h /usr/include/
 
 popd

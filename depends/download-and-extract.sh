@@ -8,5 +8,5 @@ if [ ! -f $archive.tar.gz ]; then
     wget -O $archive.tar.gz $url
 fi
 
-rmdir $archive
+rm -r $archive
 tar -xvzf $archive.tar.gz

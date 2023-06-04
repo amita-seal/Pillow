@@ -1,5 +1,3 @@
-import pytest
-
 from PIL import Image
 
 from .helper import hopper
@@ -17,60 +15,70 @@ def verify(im1):
             xy = x, y
             p1 = pix1[xy]
             p2 = pix2[xy]
-            assert (
-                p1 == p2
-            ), f"got {repr(p1)} from mode {im1.mode} at {xy}, expected {repr(p2)}"
+            assert p1 == p2, "got {!r} from mode {} at {}, expected {!r}".format(
+                p1, im1.mode, xy, p2
+            )
 
 
-@pytest.mark.parametrize("mode", ("L", "I;16", "I;16B", "I;16L", "I"))
-def test_basic(tmp_path, mode):
+def test_basic(tmp_path):
     # PIL 1.1 has limited support for 16-bit image data.  Check that
     # create/copy/transform and save works as expected.
 
-    im_in = original.convert(mode)
-    verify(im_in)
+    def basic(mode):
 
-    w, h = im_in.size
+        imIn = original.convert(mode)
+        verify(imIn)
 
-    im_out = im_in.copy()
-    verify(im_out)  # copy
+        w, h = imIn.size
 
-    im_out = im_in.transform((w, h), Image.Transform.EXTENT, (0, 0, w, h))
-    verify(im_out)  # transform
+        imOut = imIn.copy()
+        verify(imOut)  # copy
 
-    filename = str(tmp_path / "temp.im")
-    im_in.save(filename)
+        imOut = imIn.transform((w, h), Image.EXTENT, (0, 0, w, h))
+        verify(imOut)  # transform
 
-    with Image.open(filename) as im_out:
-        verify(im_in)
-        verify(im_out)
+        filename = str(tmp_path / "temp.im")
+        imIn.save(filename)
 
-    im_out = im_in.crop((0, 0, w, h))
-    verify(im_out)
+        with Image.open(filename) as imOut:
 
-    im_out = Image.new(mode, (w, h), None)
-    im_out.paste(im_in.crop((0, 0, w // 2, h)), (0, 0))
-    im_out.paste(im_in.crop((w // 2, 0, w, h)), (w // 2, 0))
+            verify(imIn)
+            verify(imOut)
 
-    verify(im_in)
-    verify(im_out)
+        imOut = imIn.crop((0, 0, w, h))
+        verify(imOut)
 
-    im_in = Image.new(mode, (1, 1), 1)
-    assert im_in.getpixel((0, 0)) == 1
+        imOut = Image.new(mode, (w, h), None)
+        imOut.paste(imIn.crop((0, 0, w // 2, h)), (0, 0))
+        imOut.paste(imIn.crop((w // 2, 0, w, h)), (w // 2, 0))
 
-    im_in.putpixel((0, 0), 2)
-    assert im_in.getpixel((0, 0)) == 2
+        verify(imIn)
+        verify(imOut)
 
-    if mode == "L":
-        maximum = 255
-    else:
-        maximum = 32767
+        imIn = Image.new(mode, (1, 1), 1)
+        assert imIn.getpixel((0, 0)) == 1
 
-    im_in = Image.new(mode, (1, 1), 256)
-    assert im_in.getpixel((0, 0)) == min(256, maximum)
+        imIn.putpixel((0, 0), 2)
+        assert imIn.getpixel((0, 0)) == 2
 
-    im_in.putpixel((0, 0), 512)
-    assert im_in.getpixel((0, 0)) == min(512, maximum)
+        if mode == "L":
+            maximum = 255
+        else:
+            maximum = 32767
+
+        imIn = Image.new(mode, (1, 1), 256)
+        assert imIn.getpixel((0, 0)) == min(256, maximum)
+
+        imIn.putpixel((0, 0), 512)
+        assert imIn.getpixel((0, 0)) == min(512, maximum)
+
+    basic("L")
+
+    basic("I;16")
+    basic("I;16B")
+    basic("I;16L")
+
+    basic("I")
 
 
 def test_tobytes():
@@ -86,9 +94,13 @@ def test_tobytes():
 
 
 def test_convert():
+
     im = original.copy()
 
-    for mode in ("I;16", "I;16B", "I;16N"):
-        verify(im.convert(mode))
-        verify(im.convert(mode).convert("L"))
-        verify(im.convert(mode).convert("I"))
+    verify(im.convert("I;16"))
+    verify(im.convert("I;16").convert("L"))
+    verify(im.convert("I;16").convert("I"))
+
+    verify(im.convert("I;16B"))
+    verify(im.convert("I;16B").convert("L"))
+    verify(im.convert("I;16B").convert("I"))

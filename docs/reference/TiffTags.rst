@@ -10,10 +10,6 @@ metadata tag numbers, names, and type information.
 .. method:: lookup(tag)
 
     :param tag: Integer tag number
-    :param group: Which :py:data:`~PIL.TiffTags.TAGS_V2_GROUPS` to look in
-
-    .. versionadded:: 8.3.0
-
     :returns: Taginfo namedtuple, From the :py:data:`~PIL.TiffTags.TAGS_V2` info if possible,
         otherwise just populating the value and name from :py:data:`~PIL.TiffTags.TAGS`.
         If the tag is not recognized, "unknown" is returned for the name
@@ -46,16 +42,6 @@ metadata tag numbers, names, and type information.
 
 .. versionadded:: 3.0.0
 
-.. py:data:: PIL.TiffTags.TAGS_V2_GROUPS
-    :type: dict
-
-    :py:data:`~PIL.TiffTags.TAGS_V2` is one dimensional and
-    doesn't account for the fact that tags actually exist in
-    `different groups <https://exiftool.org/TagNames/EXIF.html>`_.
-    This dictionary is used when the tag in question is part of a group.
-
-.. versionadded:: 8.3.0
-
 .. py:data:: PIL.TiffTags.TAGS
     :type: dict
 
@@ -74,8 +60,3 @@ metadata tag numbers, names, and type information.
 
     The ``TYPES`` dictionary maps the TIFF type short integer to a
     human readable type name.
-
-.. py:data:: PIL.TiffTags.LIBTIFF_CORE
-    :type: list
-
-    A list of supported tag IDs when writing using LibTIFF.

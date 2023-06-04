@@ -33,7 +33,7 @@ vector data. Path objects can be passed to the methods on the
     method modifies the path in place, and returns the number of points left in
     the path.
 
-    ``distance`` is measured as `Manhattan distance`_ and defaults to two
+    **distance** is measured as `Manhattan distance`_ and defaults to two
     pixels.
 
 .. _Manhattan distance: https://en.wikipedia.org/wiki/Manhattan_distance
@@ -48,19 +48,21 @@ vector data. Path objects can be passed to the methods on the
 
     Maps the path through a function.
 
-.. py:method:: PIL.ImagePath.Path.tolist(flat=False)
+.. py:method:: PIL.ImagePath.Path.tolist(flat=0)
 
     Converts the path to a Python list [(x, y), …].
 
     :param flat: By default, this function returns a list of 2-tuples
                  [(x, y), ...].  If this argument is ``True``, it
                  returns a flat list [x, y, ...] instead.
-    :return: A list of coordinates. See ``flat``.
+    :return: A list of coordinates. See **flat**.
 
 .. py:method:: PIL.ImagePath.Path.transform(matrix)
 
     Transforms the path in place, using an affine transform. The matrix is a
-    6-tuple (a, b, c, d, e, f), and each point is mapped as follows::
+    6-tuple (a, b, c, d, e, f), and each point is mapped as follows:
+
+    .. code-block:: python
 
         xOut = xIn * a + yIn * b + c
         yOut = xIn * d + yIn * e + f

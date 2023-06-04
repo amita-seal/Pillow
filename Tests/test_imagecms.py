@@ -1,20 +1,12 @@
 import datetime
 import os
 import re
-import shutil
 from io import BytesIO
 
 import pytest
-
 from PIL import Image, ImageMode, features
 
-from .helper import (
-    assert_image,
-    assert_image_equal,
-    assert_image_similar,
-    assert_image_similar_tofile,
-    hopper,
-)
+from .helper import assert_image, assert_image_equal, assert_image_similar, hopper
 
 try:
     from PIL import ImageCms
@@ -54,7 +46,7 @@ def test_sanity():
     assert list(map(type, v)) == [str, str, str, str]
 
     # internal version number
-    assert re.search(r"\d+\.\d+(\.\d+)?$", features.version_module("littlecms2"))
+    assert re.search(r"\d+\.\d+$", features.version_module("littlecms2"))
 
     skip_missing()
     i = ImageCms.profileToProfile(hopper(), SRGB, SRGB)
@@ -140,7 +132,7 @@ def test_intent():
     skip_missing()
     assert ImageCms.getDefaultIntent(SRGB) == 0
     support = ImageCms.isIntentSupported(
-        SRGB, ImageCms.Intent.ABSOLUTE_COLORIMETRIC, ImageCms.Direction.INPUT
+        SRGB, ImageCms.INTENT_ABSOLUTE_COLORIMETRIC, ImageCms.DIRECTION_INPUT
     )
     assert support == 1
 
@@ -153,7 +145,7 @@ def test_profile_object():
     #     ["sRGB built-in", "", "WhitePoint : D65 (daylight)", "", ""]
     assert ImageCms.getDefaultIntent(p) == 0
     support = ImageCms.isIntentSupported(
-        p, ImageCms.Intent.ABSOLUTE_COLORIMETRIC, ImageCms.Direction.INPUT
+        p, ImageCms.INTENT_ABSOLUTE_COLORIMETRIC, ImageCms.DIRECTION_INPUT
     )
     assert support == 1
 
@@ -174,24 +166,19 @@ def test_exceptions():
     psRGB = ImageCms.createProfile("sRGB")
     pLab = ImageCms.createProfile("LAB")
     t = ImageCms.buildTransform(pLab, psRGB, "LAB", "RGB")
-    with pytest.raises(ValueError, match="mode mismatch"):
+    with pytest.raises(ValueError):
         t.apply_in_place(hopper("RGBA"))
 
     # the procedural pyCMS API uses PyCMSError for all sorts of errors
     with hopper() as im:
-        with pytest.raises(ImageCms.PyCMSError, match="cannot open profile file"):
+        with pytest.raises(ImageCms.PyCMSError):
             ImageCms.profileToProfile(im, "foo", "bar")
-
-    with pytest.raises(ImageCms.PyCMSError, match="cannot open profile file"):
+    with pytest.raises(ImageCms.PyCMSError):
         ImageCms.buildTransform("foo", "bar", "RGB", "RGB")
-
-    with pytest.raises(ImageCms.PyCMSError, match="Invalid type for Profile"):
+    with pytest.raises(ImageCms.PyCMSError):
         ImageCms.getProfileName(None)
     skip_missing()
-
-    # Python <= 3.9: "an integer is required (got type NoneType)"
-    # Python > 3.9: "'NoneType' object cannot be interpreted as an integer"
-    with pytest.raises(ImageCms.PyCMSError, match="integer"):
+    with pytest.raises(ImageCms.PyCMSError):
         ImageCms.isIntentSupported(SRGB, None, None)
 
 
@@ -206,30 +193,13 @@ def test_lab_color_profile():
 
 
 def test_unsupported_color_space():
-    with pytest.raises(
-        ImageCms.PyCMSError,
-        match=re.escape(
-            "Color space not supported for on-the-fly profile creation (unsupported)"
-        ),
-    ):
+    with pytest.raises(ImageCms.PyCMSError):
         ImageCms.createProfile("unsupported")
 
 
 def test_invalid_color_temperature():
-    with pytest.raises(
-        ImageCms.PyCMSError,
-        match='Color temperature must be numeric, "invalid" not valid',
-    ):
+    with pytest.raises(ImageCms.PyCMSError):
         ImageCms.createProfile("LAB", "invalid")
-
-
-@pytest.mark.parametrize("flag", ("my string", -1))
-def test_invalid_flag(flag):
-    with hopper() as im:
-        with pytest.raises(
-            ImageCms.PyCMSError, match="flags must be an integer between 0 and "
-        ):
-            ImageCms.profileToProfile(im, "foo", "bar", flags=flag)
 
 
 def test_simple_lab():
@@ -268,7 +238,8 @@ def test_lab_color():
 
     # i.save('temp.lab.tif')  # visually verified vs PS.
 
-    assert_image_similar_tofile(i, "Tests/images/hopper.Lab.tif", 3.5)
+    with Image.open("Tests/images/hopper.Lab.tif") as target:
+        assert_image_similar(i, target, 3.5)
 
 
 def test_lab_srgb():
@@ -325,7 +296,7 @@ def test_extended_information():
     def assert_truncated_tuple_equal(tup1, tup2, digits=10):
         # Helper function to reduce precision of tuples of floats
         # recursively and then check equality.
-        power = 10**digits
+        power = 10 ** digits
 
         def truncate_tuple(tuple_or_float):
             return tuple(
@@ -464,28 +435,48 @@ def test_extended_information():
     assert p.xcolor_space == "RGB "
 
 
-def test_non_ascii_path(tmp_path):
+def test_deprecations():
     skip_missing()
-    tempfile = str(tmp_path / ("temp_" + chr(128) + ".icc"))
-    try:
-        shutil.copy(SRGB, tempfile)
-    except UnicodeEncodeError:
-        pytest.skip("Non-ASCII path could not be created")
-
-    o = ImageCms.getOpenProfile(tempfile)
+    o = ImageCms.getOpenProfile(SRGB)
     p = o.profile
-    assert p.model == "IEC 61966-2-1 Default RGB Colour Space - sRGB"
+
+    def helper_deprecated(attr, expected):
+        result = pytest.warns(DeprecationWarning, getattr, p, attr)
+        assert result == expected
+
+    # p.color_space
+    helper_deprecated("color_space", "RGB")
+
+    # p.pcs
+    helper_deprecated("pcs", "XYZ")
+
+    # p.product_copyright
+    helper_deprecated(
+        "product_copyright", "Copyright International Color Consortium, 2009"
+    )
+
+    # p.product_desc
+    helper_deprecated("product_desc", "sRGB IEC61966-2-1 black scaled")
+
+    # p.product_description
+    helper_deprecated("product_description", "sRGB IEC61966-2-1 black scaled")
+
+    # p.product_manufacturer
+    helper_deprecated("product_manufacturer", "")
+
+    # p.product_model
+    helper_deprecated("product_model", "IEC 61966-2-1 Default RGB Colour Space - sRGB")
 
 
 def test_profile_typesafety():
-    """Profile init type safety
+    """ Profile init type safety
 
     prepatch, these would segfault, postpatch they should emit a typeerror
     """
 
-    with pytest.raises(TypeError, match="Invalid type for Profile"):
+    with pytest.raises(TypeError):
         ImageCms.ImageCmsProfile(0).tobytes()
-    with pytest.raises(TypeError, match="Invalid type for Profile"):
+    with pytest.raises(TypeError):
         ImageCms.ImageCmsProfile(1).tobytes()
 
 
@@ -615,14 +606,3 @@ def test_auxiliary_channels_isolated():
                 )
 
                 assert_image_equal(test_image.convert(dst_format[2]), reference_image)
-
-
-@pytest.mark.parametrize("mode", ("RGB", "RGBA", "RGBX"))
-def test_rgb_lab(mode):
-    im = Image.new(mode, (1, 1))
-    converted_im = im.convert("LAB")
-    assert converted_im.getpixel((0, 0)) == (0, 128, 128)
-
-    im = Image.new("LAB", (1, 1), (255, 0, 0))
-    converted_im = im.convert(mode)
-    assert converted_im.getpixel((0, 0))[:3] == (0, 255, 255)

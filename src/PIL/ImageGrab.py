@@ -15,13 +15,14 @@
 # See the README file for information on usage and redistribution.
 #
 
-import os
-import shutil
-import subprocess
 import sys
-import tempfile
 
 from . import Image
+
+if sys.platform == "darwin":
+    import os
+    import tempfile
+    import subprocess
 
 
 def grab(bbox=None, include_layered_windows=False, all_screens=False, xdisplay=None):
@@ -29,18 +30,14 @@ def grab(bbox=None, include_layered_windows=False, all_screens=False, xdisplay=N
         if sys.platform == "darwin":
             fh, filepath = tempfile.mkstemp(".png")
             os.close(fh)
-            args = ["screencapture"]
-            if bbox:
-                left, top, right, bottom = bbox
-                args += ["-R", f"{left},{top},{right-left},{bottom-top}"]
-            subprocess.call(args + ["-x", filepath])
+            subprocess.call(["screencapture", "-x", filepath])
             im = Image.open(filepath)
             im.load()
             os.unlink(filepath)
             if bbox:
-                im_resized = im.resize((right - left, bottom - top))
+                im_cropped = im.crop(bbox)
                 im.close()
-                return im_resized
+                return im_cropped
             return im
         elif sys.platform == "win32":
             offset, size, data = Image.core.grabscreen_win32(
@@ -61,35 +58,14 @@ def grab(bbox=None, include_layered_windows=False, all_screens=False, xdisplay=N
                 left, top, right, bottom = bbox
                 im = im.crop((left - x0, top - y0, right - x0, bottom - y0))
             return im
-    try:
-        if not Image.core.HAVE_XCB:
-            msg = "Pillow was built without XCB support"
-            raise OSError(msg)
-        size, data = Image.core.grabscreen_x11(xdisplay)
-    except OSError:
-        if (
-            xdisplay is None
-            and sys.platform not in ("darwin", "win32")
-            and shutil.which("gnome-screenshot")
-        ):
-            fh, filepath = tempfile.mkstemp(".png")
-            os.close(fh)
-            subprocess.call(["gnome-screenshot", "-f", filepath])
-            im = Image.open(filepath)
-            im.load()
-            os.unlink(filepath)
-            if bbox:
-                im_cropped = im.crop(bbox)
-                im.close()
-                return im_cropped
-            return im
-        else:
-            raise
-    else:
-        im = Image.frombytes("RGB", size, data, "raw", "BGRX", size[0] * 4, 1)
-        if bbox:
-            im = im.crop(bbox)
-        return im
+    # use xdisplay=None for default display on non-win32/macOS systems
+    if not Image.core.HAVE_XCB:
+        raise OSError("Pillow was built without XCB support")
+    size, data = Image.core.grabscreen_x11(xdisplay)
+    im = Image.frombytes("RGB", size, data, "raw", "BGRX", size[0] * 4, 1)
+    if bbox:
+        im = im.crop(bbox)
+    return im
 
 
 def grabclipboard():
@@ -141,31 +117,4 @@ def grabclipboard():
                 return BmpImagePlugin.DibImageFile(data)
         return None
     else:
-        if shutil.which("wl-paste"):
-            output = subprocess.check_output(["wl-paste", "-l"]).decode()
-            mimetypes = output.splitlines()
-            if "image/png" in mimetypes:
-                mimetype = "image/png"
-            elif mimetypes:
-                mimetype = mimetypes[0]
-            else:
-                mimetype = None
-
-            args = ["wl-paste"]
-            if mimetype:
-                args.extend(["-t", mimetype])
-        elif shutil.which("xclip"):
-            args = ["xclip", "-selection", "clipboard", "-t", "image/png", "-o"]
-        else:
-            msg = "wl-paste or xclip is required for ImageGrab.grabclipboard() on Linux"
-            raise NotImplementedError(msg)
-        fh, filepath = tempfile.mkstemp()
-        err = subprocess.run(args, stdout=fh, stderr=subprocess.PIPE).stderr
-        os.close(fh)
-        if err:
-            msg = f"{args[0]} error: {err.strip().decode()}"
-            raise ChildProcessError(msg)
-        im = Image.open(filepath)
-        im.load()
-        os.unlink(filepath)
-        return im
+        raise NotImplementedError("ImageGrab.grabclipboard() is macOS and Windows only")

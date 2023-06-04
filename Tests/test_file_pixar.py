@@ -1,5 +1,4 @@
 import pytest
-
 from PIL import Image, PixarImagePlugin
 
 from .helper import assert_image_similar, hopper

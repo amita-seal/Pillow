@@ -10,7 +10,9 @@ Text stroking
 ``stroke_width`` and ``stroke_fill`` arguments have been added to text drawing
 operations. They allow text to be outlined, setting the width of the stroke and
 and the color respectively. If not provided, ``stroke_fill`` will default to
-the ``fill`` parameter. ::
+the ``fill`` parameter.
+
+.. code-block:: python
 
     from PIL import Image, ImageDraw, ImageFont
 
@@ -26,7 +28,9 @@ the ``fill`` parameter. ::
     draw.multiline_text((10, 10), "A\nB", "#f00", font,
                         stroke_width=2, stroke_fill="#0f0")
 
-For example, ::
+For example,
+
+.. code-block:: python
 
     from PIL import Image, ImageDraw, ImageFont
 
@@ -69,7 +73,7 @@ Security
 ========
 
 This release catches several buffer overruns, as well as addressing
-:cve:`2019-16865`. The CVE is regarding DOS problems, such as consuming large
+CVE-2019-16865. The CVE is regarding DOS problems, such as consuming large
 amounts of memory, or taking a large amount of time to process an image.
 
 In RawDecode.c, an error is now thrown if skip is calculated to be less than
@@ -92,14 +96,14 @@ Other Changes
 Removed bdist_wininst .exe installers
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.exe installers fell out of favour with :pep:`527`, and will be deprecated in
+.exe installers fell out of favour with PEP 527, and will be deprecated in
 Python 3.8. Pillow will no longer be distributing them. Wheels should be used
 instead.
 
 Flags for libwebp in wheels
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-When building libwebp for inclusion in wheels, Pillow now adds the ``-O3`` and
-``-DNDEBUG`` CFLAGS. These flags would be used by default if building libwebp
+When building libwebp for inclusion in wheels, Pillow now adds the -O3 and
+-DNDEBUG CFLAGS. These flags would be used by default if building libwebp
 without debugging, and using them fixes a significant decrease in speed when
 a wheel-installed copy of Pillow performs libwebp operations.

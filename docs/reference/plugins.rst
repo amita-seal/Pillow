@@ -41,10 +41,10 @@ Plugin reference
     :undoc-members:
     :show-inheritance:
 
-:mod:`~PIL.FitsImagePlugin` Module
+:mod:`~PIL.FitsStubImagePlugin` Module
 --------------------------------------
 
-.. automodule:: PIL.FitsImagePlugin
+.. automodule:: PIL.FitsStubImagePlugin
     :members:
     :undoc-members:
     :show-inheritance:
@@ -229,11 +229,20 @@ Plugin reference
 ---------------------------------
 
 .. automodule:: PIL.PngImagePlugin
-    :members: ChunkStream, PngImageFile, PngStream, getchunks, is_cid, putchunk,
-        Blend, Disposal, MAX_TEXT_CHUNK, MAX_TEXT_MEMORY
+    :members: ChunkStream, PngStream, getchunks, is_cid, putchunk
+    :show-inheritance:
+.. autoclass:: PIL.PngImagePlugin.ChunkStream
+    :members:
     :undoc-members:
     :show-inheritance:
-    :member-order: groupwise
+.. autoclass:: PIL.PngImagePlugin.PngImageFile
+    :members:
+    :undoc-members:
+    :show-inheritance:
+.. autoclass:: PIL.PngImagePlugin.PngStream
+    :members:
+    :undoc-members:
+    :show-inheritance:
 
 
 :mod:`~PIL.PpmImagePlugin` Module

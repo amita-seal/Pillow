@@ -1,10 +1,7 @@
-import warnings
-
 import pytest
-
 from PIL import FliImagePlugin, Image
 
-from .helper import assert_image_equal, assert_image_equal_tofile, is_pypy
+from .helper import assert_image_equal, is_pypy
 
 # created as an export of a palette image from Gimp2.6
 # save as...-> hopper.fli, default options.
@@ -36,35 +33,30 @@ def test_unclosed_file():
         im = Image.open(static_test_file)
         im.load()
 
-    with pytest.warns(ResourceWarning):
-        open()
+    pytest.warns(ResourceWarning, open)
 
 
 def test_closed_file():
-    with warnings.catch_warnings():
+    def open():
         im = Image.open(static_test_file)
         im.load()
         im.close()
 
-
-def test_seek_after_close():
-    im = Image.open(animated_test_file)
-    im.seek(1)
-    im.close()
-
-    with pytest.raises(ValueError):
-        im.seek(0)
+    pytest.warns(None, open)
 
 
 def test_context_manager():
-    with warnings.catch_warnings():
+    def open():
         with Image.open(static_test_file) as im:
             im.load()
+
+    pytest.warns(None, open)
 
 
 def test_tell():
     # Arrange
     with Image.open(static_test_file) as im:
+
         # Act
         frame = im.tell()
 
@@ -77,12 +69,6 @@ def test_invalid_file():
 
     with pytest.raises(SyntaxError):
         FliImagePlugin.FliImageFile(invalid_file)
-
-
-def test_palette_chunk_second():
-    with Image.open("Tests/images/hopper_palette_chunk_second.fli") as im:
-        with Image.open(static_test_file) as expected:
-            assert_image_equal(im.convert("RGB"), expected.convert("RGB"))
 
 
 def test_n_frames():
@@ -110,6 +96,7 @@ def test_eoferror():
 
 def test_seek_tell():
     with Image.open(animated_test_file) as im:
+
         layer_number = im.tell()
         assert layer_number == 0
 
@@ -134,32 +121,5 @@ def test_seek():
     with Image.open(animated_test_file) as im:
         im.seek(50)
 
-        assert_image_equal_tofile(im, "Tests/images/a_fli.png")
-
-
-@pytest.mark.parametrize(
-    "test_file",
-    [
-        "Tests/images/timeout-9139147ce93e20eb14088fe238e541443ffd64b3.fli",
-        "Tests/images/timeout-bff0a9dc7243a8e6ede2408d2ffa6a9964698b87.fli",
-    ],
-)
-@pytest.mark.timeout(timeout=3)
-def test_timeouts(test_file):
-    with open(test_file, "rb") as f:
-        with Image.open(f) as im:
-            with pytest.raises(OSError):
-                im.load()
-
-
-@pytest.mark.parametrize(
-    "test_file",
-    [
-        "Tests/images/crash-5762152299364352.fli",
-    ],
-)
-def test_crash(test_file):
-    with open(test_file, "rb") as f:
-        with Image.open(f) as im:
-            with pytest.raises(OSError):
-                im.load()
+        with Image.open("Tests/images/a_fli.png") as expected:
+            assert_image_equal(im, expected)

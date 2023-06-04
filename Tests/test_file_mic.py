@@ -1,5 +1,4 @@
 import pytest
-
 from PIL import Image, ImagePalette
 
 from .helper import assert_image_similar, hopper, skip_unless_feature
@@ -49,16 +48,6 @@ def test_seek():
         with pytest.raises(EOFError):
             im.seek(99)
         assert im.tell() == 0
-
-
-def test_close():
-    with Image.open(TEST_FILE) as im:
-        pass
-    assert im.ole.fp.closed
-
-    im = Image.open(TEST_FILE)
-    im.close()
-    assert im.ole.fp.closed
 
 
 def test_invalid_file():

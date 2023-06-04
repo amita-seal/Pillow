@@ -1,5 +1,4 @@
 import pytest
-
 from PIL import Image, ImageMath, ImageMode
 
 from .helper import convert_to_comparable, skip_unless_feature
@@ -38,61 +37,55 @@ gradients_image = Image.open("Tests/images/radial_gradients.png")
 gradients_image.load()
 
 
-@pytest.mark.parametrize(
-    "size, expected",
-    (
-        (3, (4, 4)),
-        ((3, 1), (4, 10)),
-        ((1, 3), (10, 4)),
-    ),
-)
-def test_args_factor(size, expected):
+def test_args_factor():
     im = Image.new("L", (10, 10))
-    assert expected == im.reduce(size).size
+
+    assert (4, 4) == im.reduce(3).size
+    assert (4, 10) == im.reduce((3, 1)).size
+    assert (10, 4) == im.reduce((1, 3)).size
+
+    with pytest.raises(ValueError):
+        im.reduce(0)
+    with pytest.raises(TypeError):
+        im.reduce(2.0)
+    with pytest.raises(ValueError):
+        im.reduce((0, 10))
 
 
-@pytest.mark.parametrize(
-    "size, expected_error", ((0, ValueError), (2.0, TypeError), ((0, 10), ValueError))
-)
-def test_args_factor_error(size, expected_error):
+def test_args_box():
     im = Image.new("L", (10, 10))
-    with pytest.raises(expected_error):
-        im.reduce(size)
+
+    assert (5, 5) == im.reduce(2, (0, 0, 10, 10)).size
+    assert (1, 1) == im.reduce(2, (5, 5, 6, 6)).size
+
+    with pytest.raises(TypeError):
+        im.reduce(2, "stri")
+    with pytest.raises(TypeError):
+        im.reduce(2, 2)
+    with pytest.raises(ValueError):
+        im.reduce(2, (0, 0, 11, 10))
+    with pytest.raises(ValueError):
+        im.reduce(2, (0, 0, 10, 11))
+    with pytest.raises(ValueError):
+        im.reduce(2, (-1, 0, 10, 10))
+    with pytest.raises(ValueError):
+        im.reduce(2, (0, -1, 10, 10))
+    with pytest.raises(ValueError):
+        im.reduce(2, (0, 5, 10, 5))
+    with pytest.raises(ValueError):
+        im.reduce(2, (5, 0, 5, 10))
 
 
-@pytest.mark.parametrize(
-    "size, expected",
-    (
-        ((0, 0, 10, 10), (5, 5)),
-        ((5, 5, 6, 6), (1, 1)),
-    ),
-)
-def test_args_box(size, expected):
-    im = Image.new("L", (10, 10))
-    assert expected == im.reduce(2, size).size
-
-
-@pytest.mark.parametrize(
-    "size, expected_error",
-    (
-        ("stri", TypeError),
-        ((0, 0, 11, 10), ValueError),
-        ((0, 0, 10, 11), ValueError),
-        ((-1, 0, 10, 10), ValueError),
-        ((0, -1, 10, 10), ValueError),
-        ((0, 5, 10, 5), ValueError),
-        ((5, 0, 5, 10), ValueError),
-    ),
-)
-def test_args_box_error(size, expected_error):
-    im = Image.new("L", (10, 10))
-    with pytest.raises(expected_error):
-        im.reduce(2, size).size
-
-
-@pytest.mark.parametrize("mode", ("P", "1", "I;16"))
-def test_unsupported_modes(mode):
+def test_unsupported_modes():
     im = Image.new("P", (10, 10))
+    with pytest.raises(ValueError):
+        im.reduce(3)
+
+    im = Image.new("1", (10, 10))
+    with pytest.raises(ValueError):
+        im.reduce(3)
+
+    im = Image.new("I;16", (10, 10))
     with pytest.raises(ValueError):
         im.reduce(3)
 
@@ -103,7 +96,7 @@ def get_image(mode):
         bands = [gradients_image]
         for _ in mode_info.bands[1:]:
             # rotate previous image
-            band = bands[-1].transpose(Image.Transpose.ROTATE_90)
+            band = bands[-1].transpose(Image.ROTATE_90)
             bands.append(band)
         # Correct alpha channel by transforming completely transparent pixels.
         # Low alpha values also emphasize error after alpha multiplication.
@@ -144,34 +137,32 @@ def compare_reduce_with_reference(im, factor, average_diff=0.4, max_diff=1):
     reference = Image.new(im.mode, reduced.size)
     area_size = (im.size[0] // factor[0], im.size[1] // factor[1])
     area_box = (0, 0, area_size[0] * factor[0], area_size[1] * factor[1])
-    area = im.resize(area_size, Image.Resampling.BOX, area_box)
+    area = im.resize(area_size, Image.BOX, area_box)
     reference.paste(area, (0, 0))
 
     if area_size[0] < reduced.size[0]:
         assert reduced.size[0] - area_size[0] == 1
         last_column_box = (area_box[2], 0, im.size[0], area_box[3])
-        last_column = im.resize(
-            (1, area_size[1]), Image.Resampling.BOX, last_column_box
-        )
+        last_column = im.resize((1, area_size[1]), Image.BOX, last_column_box)
         reference.paste(last_column, (area_size[0], 0))
 
     if area_size[1] < reduced.size[1]:
         assert reduced.size[1] - area_size[1] == 1
         last_row_box = (0, area_box[3], area_box[2], im.size[1])
-        last_row = im.resize((area_size[0], 1), Image.Resampling.BOX, last_row_box)
+        last_row = im.resize((area_size[0], 1), Image.BOX, last_row_box)
         reference.paste(last_row, (0, area_size[1]))
 
     if area_size[0] < reduced.size[0] and area_size[1] < reduced.size[1]:
         last_pixel_box = (area_box[2], area_box[3], im.size[0], im.size[1])
-        last_pixel = im.resize((1, 1), Image.Resampling.BOX, last_pixel_box)
+        last_pixel = im.resize((1, 1), Image.BOX, last_pixel_box)
         reference.paste(last_pixel, area_size)
 
     assert_compare_images(reduced, reference, average_diff, max_diff)
 
 
 def assert_compare_images(a, b, max_average_diff, max_diff=255):
-    assert a.mode == b.mode, f"got mode {repr(a.mode)}, expected {repr(b.mode)}"
-    assert a.size == b.size, f"got size {repr(a.size)}, expected {repr(b.size)}"
+    assert a.mode == b.mode, "got mode %r, expected %r" % (a.mode, b.mode)
+    assert a.size == b.size, "got size %r, expected %r" % (a.size, b.size)
 
     a, b = convert_to_comparable(a, b)
 
@@ -184,88 +175,83 @@ def assert_compare_images(a, b, max_average_diff, max_diff=255):
             a.size[0] * a.size[1]
         )
         msg = (
-            f"average pixel value difference {average_diff:.4f} > "
-            f"expected {max_average_diff:.4f} for '{band}' band"
+            "average pixel value difference {:.4f} > expected {:.4f} "
+            "for '{}' band".format(average_diff, max_average_diff, band)
         )
         assert max_average_diff >= average_diff, msg
 
         last_diff = [i for i, num in enumerate(ch_hist) if num > 0][-1]
-        assert max_diff >= last_diff, (
-            f"max pixel value difference {last_diff} > expected {max_diff} "
-            f"for '{band}' band"
+        assert (
+            max_diff >= last_diff
+        ), "max pixel value difference {} > expected {} for '{}' band".format(
+            last_diff, max_diff, band
         )
 
 
-@pytest.mark.parametrize("factor", remarkable_factors)
-def test_mode_L(factor):
+def test_mode_L():
     im = get_image("L")
-    compare_reduce_with_reference(im, factor)
-    compare_reduce_with_box(im, factor)
+    for factor in remarkable_factors:
+        compare_reduce_with_reference(im, factor)
+        compare_reduce_with_box(im, factor)
 
 
-@pytest.mark.parametrize("factor", remarkable_factors)
-def test_mode_LA(factor):
+def test_mode_LA():
     im = get_image("LA")
-    compare_reduce_with_reference(im, factor, 0.8, 5)
+    for factor in remarkable_factors:
+        compare_reduce_with_reference(im, factor, 0.8, 5)
 
-
-@pytest.mark.parametrize("factor", remarkable_factors)
-def test_mode_LA_opaque(factor):
-    im = get_image("LA")
     # With opaque alpha, an error should be way smaller.
     im.putalpha(Image.new("L", im.size, 255))
-    compare_reduce_with_reference(im, factor)
-    compare_reduce_with_box(im, factor)
+    for factor in remarkable_factors:
+        compare_reduce_with_reference(im, factor)
+        compare_reduce_with_box(im, factor)
 
 
-@pytest.mark.parametrize("factor", remarkable_factors)
-def test_mode_La(factor):
+def test_mode_La():
     im = get_image("La")
-    compare_reduce_with_reference(im, factor)
-    compare_reduce_with_box(im, factor)
+    for factor in remarkable_factors:
+        compare_reduce_with_reference(im, factor)
+        compare_reduce_with_box(im, factor)
 
 
-@pytest.mark.parametrize("factor", remarkable_factors)
-def test_mode_RGB(factor):
+def test_mode_RGB():
     im = get_image("RGB")
-    compare_reduce_with_reference(im, factor)
-    compare_reduce_with_box(im, factor)
+    for factor in remarkable_factors:
+        compare_reduce_with_reference(im, factor)
+        compare_reduce_with_box(im, factor)
 
 
-@pytest.mark.parametrize("factor", remarkable_factors)
-def test_mode_RGBA(factor):
+def test_mode_RGBA():
     im = get_image("RGBA")
-    compare_reduce_with_reference(im, factor, 0.8, 5)
+    for factor in remarkable_factors:
+        compare_reduce_with_reference(im, factor, 0.8, 5)
 
-
-@pytest.mark.parametrize("factor", remarkable_factors)
-def test_mode_RGBA_opaque(factor):
-    im = get_image("RGBA")
     # With opaque alpha, an error should be way smaller.
     im.putalpha(Image.new("L", im.size, 255))
-    compare_reduce_with_reference(im, factor)
-    compare_reduce_with_box(im, factor)
+    for factor in remarkable_factors:
+        compare_reduce_with_reference(im, factor)
+        compare_reduce_with_box(im, factor)
 
 
-@pytest.mark.parametrize("factor", remarkable_factors)
-def test_mode_RGBa(factor):
+def test_mode_RGBa():
     im = get_image("RGBa")
-    compare_reduce_with_reference(im, factor)
-    compare_reduce_with_box(im, factor)
+    for factor in remarkable_factors:
+        compare_reduce_with_reference(im, factor)
+        compare_reduce_with_box(im, factor)
 
 
-@pytest.mark.parametrize("factor", remarkable_factors)
-def test_mode_I(factor):
+def test_mode_I():
     im = get_image("I")
-    compare_reduce_with_reference(im, factor)
-    compare_reduce_with_box(im, factor)
+    for factor in remarkable_factors:
+        compare_reduce_with_reference(im, factor)
+        compare_reduce_with_box(im, factor)
 
 
-@pytest.mark.parametrize("factor", remarkable_factors)
-def test_mode_F(factor):
+def test_mode_F():
     im = get_image("F")
-    compare_reduce_with_reference(im, factor, 0, 0)
-    compare_reduce_with_box(im, factor)
+    for factor in remarkable_factors:
+        compare_reduce_with_reference(im, factor, 0, 0)
+        compare_reduce_with_box(im, factor)
 
 
 @skip_unless_feature("jpg_2000")

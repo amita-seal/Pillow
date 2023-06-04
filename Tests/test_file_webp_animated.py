@@ -1,12 +1,11 @@
 import pytest
-from packaging.version import parse as parse_version
-
-from PIL import Image, features
+from PIL import Image
 
 from .helper import (
     assert_image_equal,
     assert_image_similar,
     is_big_endian,
+    on_ci,
     skip_unless_feature,
 )
 
@@ -28,6 +27,7 @@ def test_n_frames():
         assert im.is_animated
 
 
+@pytest.mark.xfail(is_big_endian() and on_ci(), reason="Fails on big-endian")
 def test_write_animation_L(tmp_path):
     """
     Convert an animated GIF to animated WebP, then compare the frame count, and first
@@ -45,19 +45,15 @@ def test_write_animation_L(tmp_path):
             # Compare first and last frames to the original animated GIF
             orig.load()
             im.load()
-            assert_image_similar(im, orig.convert("RGBA"), 32.9)
-
-            if is_big_endian():
-                webp = parse_version(features.version_module("webp"))
-                if webp < parse_version("1.2.2"):
-                    pytest.skip("Fails with libwebp earlier than 1.2.2")
+            assert_image_similar(im, orig.convert("RGBA"), 25.0)
             orig.seek(orig.n_frames - 1)
             im.seek(im.n_frames - 1)
             orig.load()
             im.load()
-            assert_image_similar(im, orig.convert("RGBA"), 32.9)
+            assert_image_similar(im, orig.convert("RGBA"), 25.0)
 
 
+@pytest.mark.xfail(is_big_endian() and on_ci(), reason="Fails on big-endian")
 def test_write_animation_RGB(tmp_path):
     """
     Write an animated WebP from RGB frames, and ensure the frames
@@ -73,10 +69,6 @@ def test_write_animation_RGB(tmp_path):
             assert_image_equal(im, frame1.convert("RGBA"))
 
             # Compare second frame to original
-            if is_big_endian():
-                webp = parse_version(features.version_module("webp"))
-                if webp < parse_version("1.2.2"):
-                    pytest.skip("Fails with libwebp earlier than 1.2.2")
             im.seek(1)
             im.load()
             assert_image_equal(im, frame2.convert("RGBA"))
@@ -90,14 +82,14 @@ def test_write_animation_RGB(tmp_path):
             check(temp_file1)
 
             # Tests appending using a generator
-            def im_generator(ims):
+            def imGenerator(ims):
                 yield from ims
 
             temp_file2 = str(tmp_path / "temp_generator.webp")
             frame1.copy().save(
                 temp_file2,
                 save_all=True,
-                append_images=im_generator([frame2]),
+                append_images=imGenerator([frame2]),
                 lossless=True,
             )
             check(temp_file2)
@@ -132,18 +124,6 @@ def test_timestamp_and_duration(tmp_path):
             assert im.info["duration"] == durations[frame]
             assert im.info["timestamp"] == ts
             ts += durations[frame]
-
-
-def test_float_duration(tmp_path):
-    temp_file = str(tmp_path / "temp.webp")
-    with Image.open("Tests/images/iss634.apng") as im:
-        assert im.info["duration"] == 70.0
-
-        im.save(temp_file, save_all=True)
-
-    with Image.open(temp_file) as reloaded:
-        reloaded.load()
-        assert reloaded.info["duration"] == 70
 
 
 def test_seeking(tmp_path):

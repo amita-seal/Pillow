@@ -13,12 +13,16 @@ Implicitly closing the image's underlying file in ``Image.__del__`` has been dep
 Use a context manager or call ``Image.close()`` instead to close the file in a
 deterministic way.
 
-Deprecated::
+Deprecated:
+
+.. code-block:: python
 
     im = Image.open("hopper.png")
     im.save("out.jpg")
 
-Use instead::
+Use instead:
+
+.. code-block:: python
 
     with Image.open("hopper.png") as im:
         im.save("out.jpg")
@@ -75,7 +79,9 @@ Image quality for JPEG compressed TIFF
 
 The TIFF encoder accepts a ``quality`` parameter for ``jpeg`` compressed TIFF files. A
 value from 0 (worst) to 100 (best) controls the image quality, similar to the JPEG
-encoder. The default is 75. For example::
+encoder. The default is 75. For example:
+
+.. code-block:: python
 
     im.save("out.tif", compression="jpeg", quality=85)
 

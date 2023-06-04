@@ -1,7 +1,6 @@
 import sys
 
 import pytest
-
 from PIL import Image
 
 from .helper import is_pypy
@@ -110,9 +109,9 @@ class TestCoreMemory:
 
         with pytest.raises(ValueError):
             Image.core.set_blocks_max(-1)
-        if sys.maxsize < 2**32:
+        if sys.maxsize < 2 ** 32:
             with pytest.raises(ValueError):
-                Image.core.set_blocks_max(2**29)
+                Image.core.set_blocks_max(2 ** 29)
 
     @pytest.mark.skipif(is_pypy(), reason="Images not collected")
     def test_set_blocks_max_stats(self):
@@ -177,14 +176,13 @@ class TestEnvVars:
         Image._apply_env_variables({"PILLOW_BLOCK_SIZE": "2m"})
         assert Image.core.get_block_size() == 2 * 1024 * 1024
 
-    @pytest.mark.parametrize(
-        "var",
-        (
-            {"PILLOW_ALIGNMENT": "15"},
-            {"PILLOW_BLOCK_SIZE": "1024"},
-            {"PILLOW_BLOCKS_MAX": "wat"},
-        ),
-    )
-    def test_warnings(self, var):
-        with pytest.warns(UserWarning):
-            Image._apply_env_variables(var)
+    def test_warnings(self):
+        pytest.warns(
+            UserWarning, Image._apply_env_variables, {"PILLOW_ALIGNMENT": "15"}
+        )
+        pytest.warns(
+            UserWarning, Image._apply_env_variables, {"PILLOW_BLOCK_SIZE": "1024"}
+        )
+        pytest.warns(
+            UserWarning, Image._apply_env_variables, {"PILLOW_BLOCKS_MAX": "wat"}
+        )

@@ -11,8 +11,6 @@ import tempfile
 from io import BytesIO
 
 import pytest
-from packaging.version import parse as parse_version
-
 from PIL import Image, ImageMath, features
 
 logger = logging.getLogger(__name__)
@@ -20,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 HAS_UPLOADER = False
 
-if os.environ.get("SHOW_ERRORS"):
+if os.environ.get("SHOW_ERRORS", None):
     # local img.show for errors.
     HAS_UPLOADER = True
 
@@ -29,6 +27,7 @@ if os.environ.get("SHOW_ERRORS"):
         def upload(a, b):
             a.show()
             b.show()
+
 
 elif "GITHUB_ACTIONS" in os.environ:
     HAS_UPLOADER = True
@@ -42,6 +41,7 @@ elif "GITHUB_ACTIONS" in os.environ:
             a.save(os.path.join(tmpdir, "a.png"))
             b.save(os.path.join(tmpdir, "b.png"))
             return tmpdir
+
 
 else:
     try:
@@ -67,31 +67,37 @@ def convert_to_comparable(a, b):
 
 def assert_deep_equal(a, b, msg=None):
     try:
-        assert len(a) == len(b), msg or f"got length {len(a)}, expected {len(b)}"
+        assert len(a) == len(b), msg or "got length {}, expected {}".format(
+            len(a), len(b)
+        )
     except Exception:
         assert a == b, msg
 
 
 def assert_image(im, mode, size, msg=None):
     if mode is not None:
-        assert im.mode == mode, (
-            msg or f"got mode {repr(im.mode)}, expected {repr(mode)}"
+        assert im.mode == mode, msg or "got mode {!r}, expected {!r}".format(
+            im.mode, mode
         )
 
     if size is not None:
-        assert im.size == size, (
-            msg or f"got size {repr(im.size)}, expected {repr(size)}"
+        assert im.size == size, msg or "got size {!r}, expected {!r}".format(
+            im.size, size
         )
 
 
 def assert_image_equal(a, b, msg=None):
-    assert a.mode == b.mode, msg or f"got mode {repr(a.mode)}, expected {repr(b.mode)}"
-    assert a.size == b.size, msg or f"got size {repr(a.size)}, expected {repr(b.size)}"
+    assert a.mode == b.mode, msg or "got mode {!r}, expected {!r}".format(
+        a.mode, b.mode
+    )
+    assert a.size == b.size, msg or "got size {!r}, expected {!r}".format(
+        a.size, b.size
+    )
     if a.tobytes() != b.tobytes():
         if HAS_UPLOADER:
             try:
                 url = test_image_results.upload(a, b)
-                logger.error(f"Url for test images: {url}")
+                logger.error("Url for test images: %s" % url)
             except Exception:
                 pass
 
@@ -106,8 +112,12 @@ def assert_image_equal_tofile(a, filename, msg=None, mode=None):
 
 
 def assert_image_similar(a, b, epsilon, msg=None):
-    assert a.mode == b.mode, msg or f"got mode {repr(a.mode)}, expected {repr(b.mode)}"
-    assert a.size == b.size, msg or f"got size {repr(a.size)}, expected {repr(b.size)}"
+    assert a.mode == b.mode, msg or "got mode {!r}, expected {!r}".format(
+        a.mode, b.mode
+    )
+    assert a.size == b.size, msg or "got size {!r}, expected {!r}".format(
+        a.size, b.size
+    )
 
     a, b = convert_to_comparable(a, b)
 
@@ -119,14 +129,13 @@ def assert_image_similar(a, b, epsilon, msg=None):
     ave_diff = diff / (a.size[0] * a.size[1])
     try:
         assert epsilon >= ave_diff, (
-            (msg or "")
-            + f" average pixel value difference {ave_diff:.4f} > epsilon {epsilon:.4f}"
-        )
+            msg or ""
+        ) + " average pixel value difference %.4f > epsilon %.4f" % (ave_diff, epsilon)
     except Exception as e:
         if HAS_UPLOADER:
             try:
                 url = test_image_results.upload(a, b)
-                logger.error(f"Url for test images: {url}")
+                logger.error("Url for test images: %s" % url)
             except Exception:
                 pass
         raise e
@@ -157,33 +166,8 @@ def assert_tuple_approx_equal(actuals, targets, threshold, msg):
 
 
 def skip_unless_feature(feature):
-    reason = f"{feature} not available"
+    reason = "%s not available" % feature
     return pytest.mark.skipif(not features.check(feature), reason=reason)
-
-
-def skip_unless_feature_version(feature, version_required, reason=None):
-    if not features.check(feature):
-        return pytest.mark.skip(f"{feature} not available")
-    if reason is None:
-        reason = f"{feature} is older than {version_required}"
-    version_required = parse_version(version_required)
-    version_available = parse_version(features.version(feature))
-    return pytest.mark.skipif(version_available < version_required, reason=reason)
-
-
-def mark_if_feature_version(mark, feature, version_blacklist, reason=None):
-    if not features.check(feature):
-        return pytest.mark.pil_noop_mark()
-    if reason is None:
-        reason = f"{feature} is {version_blacklist}"
-    version_required = parse_version(version_blacklist)
-    version_available = parse_version(features.version(feature))
-    if (
-        version_available.major == version_required.major
-        and version_available.minor == version_required.minor
-    ):
-        return mark(reason=reason)
-    return pytest.mark.pil_noop_mark()
 
 
 @pytest.mark.skipif(sys.platform.startswith("win32"), reason="Requires Unix or macOS")
@@ -200,7 +184,7 @@ class PillowLeakTestCase:
         :returns: memory usage in kilobytes
         """
 
-        from resource import RUSAGE_SELF, getrusage
+        from resource import getrusage, RUSAGE_SELF
 
         mem = getrusage(RUSAGE_SELF).ru_maxrss
         if sys.platform == "darwin":
@@ -208,18 +192,19 @@ class PillowLeakTestCase:
             #     ru_maxrss
             # This is the maximum resident set size utilized (in bytes).
             return mem / 1024  # Kb
-        # linux
-        # man 2 getrusage
-        #        ru_maxrss (since Linux 2.6.32)
-        #  This is the maximum resident set size used (in kilobytes).
-        return mem  # Kb
+        else:
+            # linux
+            # man 2 getrusage
+            #        ru_maxrss (since Linux 2.6.32)
+            #  This is the maximum resident set size used (in kilobytes).
+            return mem  # Kb
 
     def _test_leak(self, core):
         start_mem = self._get_mem_usage()
         for cycle in range(self.iterations):
             core()
             mem = self._get_mem_usage() - start_mem
-            msg = f"memory usage limit exceeded in iteration {cycle}"
+            msg = "memory usage limit exceeded in iteration %d" % cycle
             assert mem < self.mem_limit, msg
 
 
@@ -269,23 +254,8 @@ def netpbm_available():
     return bool(shutil.which("ppmquant") and shutil.which("ppmtogif"))
 
 
-def magick_command():
-    if sys.platform == "win32":
-        magickhome = os.environ.get("MAGICK_HOME")
-        if magickhome:
-            imagemagick = [os.path.join(magickhome, "convert.exe")]
-            graphicsmagick = [os.path.join(magickhome, "gm.exe"), "convert"]
-        else:
-            imagemagick = None
-            graphicsmagick = None
-    else:
-        imagemagick = ["convert"]
-        graphicsmagick = ["gm", "convert"]
-
-    if imagemagick and shutil.which(imagemagick[0]):
-        return imagemagick
-    if graphicsmagick and shutil.which(graphicsmagick[0]):
-        return graphicsmagick
+def imagemagick_available():
+    return bool(IMCONVERT and shutil.which(IMCONVERT))
 
 
 def on_appveyor():
@@ -297,18 +267,12 @@ def on_github_actions():
 
 
 def on_ci():
-    # GitHub Actions and AppVeyor have "CI"
+    # GitHub Actions, Travis and AppVeyor have "CI"
     return "CI" in os.environ
 
 
 def is_big_endian():
     return sys.byteorder == "big"
-
-
-def is_ppc64le():
-    import platform
-
-    return platform.machine() == "ppc64le"
 
 
 def is_win32():
@@ -323,7 +287,15 @@ def is_mingw():
     return sysconfig.get_platform() == "mingw"
 
 
-class CachedProperty:
+if sys.platform == "win32":
+    IMCONVERT = os.environ.get("MAGICK_HOME", "")
+    if IMCONVERT:
+        IMCONVERT = os.path.join(IMCONVERT, "convert.exe")
+else:
+    IMCONVERT = "convert"
+
+
+class cached_property:
     def __init__(self, func):
         self.func = func
 

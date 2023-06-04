@@ -12,27 +12,45 @@
  * See the README file for information on usage and redistribution.
  */
 
-#include "Python.h"
-#include "libImaging/Imaging.h"
 
-#include "Tk/_tkmini.h"
+#include "Python.h"
+#include "Imaging.h"
+
+#include "_tkmini.h"
 
 /* must link with Tk/tkImaging.c */
-extern void
-TkImaging_Init(Tcl_Interp *interp);
-extern int
-load_tkinter_funcs(void);
+extern void TkImaging_Init(Tcl_Interp* interp);
+extern int load_tkinter_funcs(void);
 
-static PyObject *
-_tkinit(PyObject *self, PyObject *args) {
-    Tcl_Interp *interp;
+/* copied from _tkinter.c (this isn't as bad as it may seem: for new
+   versions, we use _tkinter's interpaddr hook instead, and all older
+   versions use this structure layout) */
 
-    PyObject *arg;
-    if (!PyArg_ParseTuple(args, "O", &arg)) {
+typedef struct {
+    PyObject_HEAD
+    Tcl_Interp* interp;
+} TkappObject;
+
+static PyObject*
+_tkinit(PyObject* self, PyObject* args)
+{
+    Tcl_Interp* interp;
+
+    PyObject* arg;
+    int is_interp;
+    if (!PyArg_ParseTuple(args, "Oi", &arg, &is_interp)) {
         return NULL;
     }
 
-    interp = (Tcl_Interp *)PyLong_AsVoidPtr(arg);
+    if (is_interp) {
+        interp = (Tcl_Interp*)PyLong_AsVoidPtr(arg);
+    } else {
+        TkappObject* app;
+        /* Do it the hard way.  This will break if the TkappObject
+        layout changes */
+        app = (TkappObject*)PyLong_AsVoidPtr(arg);
+        interp = app->interp;
+    }
 
     /* This will bomb if interp is invalid... */
     TkImaging_Init(interp);
@@ -51,16 +69,12 @@ PyMODINIT_FUNC
 PyInit__imagingtk(void) {
     static PyModuleDef module_def = {
         PyModuleDef_HEAD_INIT,
-        "_imagingtk", /* m_name */
-        NULL,         /* m_doc */
-        -1,           /* m_size */
-        functions,    /* m_methods */
+        "_imagingtk",       /* m_name */
+        NULL,               /* m_doc */
+        -1,                 /* m_size */
+        functions,          /* m_methods */
     };
     PyObject *m;
     m = PyModule_Create(&module_def);
-    if (load_tkinter_funcs() != 0) {
-        Py_DECREF(m);
-        return NULL;
-    }
-    return m;
+    return (load_tkinter_funcs() == 0) ? m : NULL;
 }

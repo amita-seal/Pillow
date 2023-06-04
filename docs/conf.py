@@ -17,6 +17,7 @@
 # sys.path.insert(0, os.path.abspath('.'))
 
 import PIL
+import sphinx_rtd_theme
 
 # -- General configuration ------------------------------------------------
 
@@ -26,18 +27,7 @@ needs_sphinx = "2.4"
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
-extensions = [
-    "sphinx.ext.autodoc",
-    "sphinx.ext.extlinks",
-    "sphinx.ext.intersphinx",
-    "sphinx.ext.viewcode",
-    "sphinx_copybutton",
-    "sphinx_inline_tabs",
-    "sphinx_removed_in",
-    "sphinxext.opengraph",
-]
-
-intersphinx_mapping = {"python": ("https://docs.python.org/3", None)}
+extensions = ["sphinx.ext.autodoc", "sphinx.ext.viewcode", "sphinx.ext.intersphinx"]
 
 # The suffix(es) of source filenames.
 # You can specify multiple suffix as a list of string:
@@ -52,10 +42,8 @@ master_doc = "index"
 
 # General information about the project.
 project = "Pillow (PIL Fork)"
-copyright = (
-    "1995-2011 Fredrik Lundh, 2010-2023 Jeffrey A. Clark (Alex) and contributors"
-)
-author = "Fredrik Lundh, Jeffrey A. Clark (Alex), contributors"
+copyright = "1995-2011 Fredrik Lundh, 2010-2020 Alex Clark and Contributors"
+author = "Fredrik Lundh, Alex Clark and Contributors"
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -71,7 +59,7 @@ release = PIL.__version__
 #
 # This is also used if you do content translation via gettext catalogs.
 # Usually you set "language" from the command line for these cases.
-language = "en"
+language = None
 
 # There are two options for replacing |today|: either, you set today to some
 # non-false value, then it is used:
@@ -81,7 +69,7 @@ language = "en"
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
-exclude_patterns = ["_build", "releasenotes/template.rst"]
+exclude_patterns = ["_build"]
 
 # The reST default role (used for this markup: `text`) to use for all
 # documents.
@@ -110,32 +98,19 @@ pygments_style = "sphinx"
 # If true, `todo` and `todoList` produce output, else they produce nothing.
 todo_include_todos = False
 
-# If true, Sphinx will warn about all references where the target cannot be found.
-# Default is False. You can activate this mode temporarily using the -n command-line
-# switch.
-nitpicky = True
-
-# A list of (type, target) tuples (by default empty) that should be ignored when
-# generating warnings in “nitpicky mode”. Note that type should include the domain name
-# if present. Example entries would be ('py:func', 'int') or
-# ('envvar', 'LD_LIBRARY_PATH').
-# nitpick_ignore = []
-
 
 # -- Options for HTML output ----------------------------------------------
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 
-html_theme = "furo"
+html_theme = "sphinx_rtd_theme"
+html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
-html_theme_options = {
-    "light_logo": "pillow-logo-dark-text.png",
-    "dark_logo": "pillow-logo.png",
-}
+# html_theme_options = {}
 
 # Add any paths that contain custom themes here, relative to this directory.
 # html_theme_path = []
@@ -149,7 +124,7 @@ html_theme_options = {
 
 # The name of an image file (relative to this directory) to place at the top
 # of the sidebar.
-# html_logo = "resources/pillow-logo.png"
+# html_logo = None
 
 # The name of an image file (within the static path) to use as favicon of the
 # docs.  This file should be a Windows icon file (.ico) being 16x16 or 32x32
@@ -245,7 +220,7 @@ latex_documents = [
         master_doc,
         "PillowPILFork.tex",
         "Pillow (PIL Fork) Documentation",
-        "Jeffrey A. Clark (Alex)",
+        "Alex Clark",
         "manual",
     )
 ]
@@ -295,7 +270,7 @@ texinfo_documents = [
         "Pillow (PIL Fork) Documentation",
         author,
         "PillowPILFork",
-        "Pillow is the friendly PIL fork by Jeffrey A. Clark (Alex) and contributors.",
+        "Pillow is the friendly PIL fork by Alex Clark and Contributors.",
         "Miscellaneous",
     )
 ]
@@ -314,35 +289,4 @@ texinfo_documents = [
 
 
 def setup(app):
-    app.add_css_file("css/dark.css")
-
-
-linkcheck_allowed_redirects = {
-    r"https://bestpractices.coreinfrastructure.org/projects/6331": r"https://bestpractices.coreinfrastructure.org/en/.*",  # noqa: E501
-    r"https://badges.gitter.im/python-pillow/Pillow.svg": r"https://badges.gitter.im/repo.svg",  # noqa: E501
-    r"https://gitter.im/python-pillow/Pillow?.*": r"https://app.gitter.im/#/room/#python-pillow_Pillow:gitter.im?.*",  # noqa: E501
-    r"https://pillow.readthedocs.io/?badge=latest": r"https://pillow.readthedocs.io/en/stable/?badge=latest",  # noqa: E501
-    r"https://pillow.readthedocs.io": r"https://pillow.readthedocs.io/en/stable/",
-    r"https://tidelift.com/badges/package/pypi/Pillow?.*": r"https://img.shields.io/badge/.*",  # noqa: E501
-    r"https://zenodo.org/badge/17549/python-pillow/Pillow.svg": r"https://zenodo.org/badge/doi/[\.0-9]+/zenodo.[0-9]+.svg",  # noqa: E501
-    r"https://zenodo.org/badge/latestdoi/17549/python-pillow/Pillow": r"https://zenodo.org/record/[0-9]+",  # noqa: E501
-}
-
-# sphinx.ext.extlinks
-# This config is a dictionary of external sites,
-# mapping unique short aliases to a base URL and a prefix.
-# https://www.sphinx-doc.org/en/master/usage/extensions/extlinks.html
-_repo = "https://github.com/python-pillow/Pillow/"
-extlinks = {
-    "cve": ("https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-%s", "CVE-%s"),
-    "cwe": ("https://cwe.mitre.org/data/definitions/%s.html", "CWE-%s"),
-    "issue": (_repo + "issues/%s", "#%s"),
-    "pr": (_repo + "pull/%s", "#%s"),
-}
-
-# sphinxext.opengraph
-ogp_image = (
-    "https://raw.githubusercontent.com/python-pillow/pillow-logo/main/"
-    "pillow-logo-dark-text-1280x640.png"
-)
-ogp_image_alt = "Pillow"
+    app.add_js_file("js/script.js")

@@ -1,16 +1,7 @@
 from io import BytesIO
 
 import pytest
-
-from PIL import (
-    BmpImagePlugin,
-    EpsImagePlugin,
-    Image,
-    ImageFile,
-    UnidentifiedImageError,
-    _binary,
-    features,
-)
+from PIL import EpsImagePlugin, Image, ImageFile, features
 
 from .helper import (
     assert_image,
@@ -30,7 +21,8 @@ SAFEBLOCK = ImageFile.SAFEBLOCK
 class TestImageFile:
     def test_parser(self):
         def roundtrip(format):
-            im = hopper("L").resize((1000, 1000), Image.Resampling.NEAREST)
+
+            im = hopper("L").resize((1000, 1000), Image.NEAREST)
             if format in ("MSP", "XBM"):
                 im = im.convert("1")
 
@@ -42,9 +34,9 @@ class TestImageFile:
 
             parser = ImageFile.Parser()
             parser.feed(data)
-            im_out = parser.close()
+            imOut = parser.close()
 
-            return im, im_out
+            return im, imOut
 
         assert_image_equal(*roundtrip("BMP"))
         im1, im2 = roundtrip("GIF")
@@ -89,19 +81,6 @@ class TestImageFile:
             p.feed(data)
             assert (48, 48) == p.image.size
 
-    @skip_unless_feature("webp")
-    @skip_unless_feature("webp_anim")
-    def test_incremental_webp(self):
-        with ImageFile.Parser() as p:
-            with open("Tests/images/hopper.webp", "rb") as f:
-                p.feed(f.read(1024))
-
-                # Check that insufficient data was given in the first feed
-                assert not p.image
-
-                p.feed(f.read())
-            assert (128, 128) == p.image.size
-
     @skip_unless_feature("zlib")
     def test_safeblock(self):
         im1 = hopper()
@@ -113,6 +92,12 @@ class TestImageFile:
             ImageFile.SAFEBLOCK = SAFEBLOCK
 
         assert_image_equal(im1, im2)
+
+    def test_raise_ioerror(self):
+        with pytest.raises(IOError):
+            with pytest.warns(DeprecationWarning) as record:
+                ImageFile.raise_ioerror(1)
+        assert len(record) == 1
 
     def test_raise_oserror(self):
         with pytest.raises(OSError):
@@ -130,37 +115,6 @@ class TestImageFile:
         p.feed(input)
         with pytest.raises(OSError):
             p.close()
-
-    def test_no_format(self):
-        buf = BytesIO(b"\x00" * 255)
-
-        class DummyImageFile(ImageFile.ImageFile):
-            def _open(self):
-                self.mode = "RGB"
-                self._size = (1, 1)
-
-        im = DummyImageFile(buf)
-        assert im.format is None
-        assert im.get_format_mimetype() is None
-
-    def test_oserror(self):
-        im = Image.new("RGB", (1, 1))
-        with pytest.raises(OSError):
-            im.save(BytesIO(), "JPEG2000", num_resolutions=2)
-
-    def test_truncated(self):
-        b = BytesIO(
-            b"BM000000000000"  # head_data
-            + _binary.o32le(
-                ImageFile.SAFEBLOCK + 1 + 4
-            )  # header_size, so BmpImagePlugin will try to read SAFEBLOCK + 1 bytes
-            + (
-                b"0" * ImageFile.SAFEBLOCK
-            )  # only SAFEBLOCK bytes, so that the header is truncated
-        )
-        with pytest.raises(OSError) as e:
-            BmpImagePlugin.BmpImageFile(b)
-        assert str(e.value) == "Truncated File Read"
 
     @skip_unless_feature("zlib")
     def test_truncated_with_errors(self):
@@ -203,14 +157,6 @@ class MockPyDecoder(ImageFile.PyDecoder):
         return -1, 0
 
 
-class MockPyEncoder(ImageFile.PyEncoder):
-    def encode(self, buffer):
-        return 1, 1, b""
-
-    def cleanup(self):
-        self.cleanup_called = True
-
-
 xoff, yoff, xsize, ysize = 10, 20, 100, 100
 
 
@@ -222,58 +168,53 @@ class MockImageFile(ImageFile.ImageFile):
         self.tile = [("MOCK", (xoff, yoff, xoff + xsize, yoff + ysize), 32, None)]
 
 
-class CodecsTest:
-    @classmethod
-    def setup_class(cls):
-        cls.decoder = MockPyDecoder(None)
-        cls.encoder = MockPyEncoder(None)
+class TestPyDecoder:
+    def get_decoder(self):
+        decoder = MockPyDecoder(None)
 
-        def decoder_closure(mode, *args):
-            cls.decoder.__init__(mode, *args)
-            return cls.decoder
+        def closure(mode, *args):
+            decoder.__init__(mode, *args)
+            return decoder
 
-        def encoder_closure(mode, *args):
-            cls.encoder.__init__(mode, *args)
-            return cls.encoder
+        Image.register_decoder("MOCK", closure)
+        return decoder
 
-        Image.register_decoder("MOCK", decoder_closure)
-        Image.register_encoder("MOCK", encoder_closure)
-
-
-class TestPyDecoder(CodecsTest):
     def test_setimage(self):
         buf = BytesIO(b"\x00" * 255)
 
         im = MockImageFile(buf)
+        d = self.get_decoder()
 
         im.load()
 
-        assert self.decoder.state.xoff == xoff
-        assert self.decoder.state.yoff == yoff
-        assert self.decoder.state.xsize == xsize
-        assert self.decoder.state.ysize == ysize
+        assert d.state.xoff == xoff
+        assert d.state.yoff == yoff
+        assert d.state.xsize == xsize
+        assert d.state.ysize == ysize
 
         with pytest.raises(ValueError):
-            self.decoder.set_as_raw(b"\x00")
+            d.set_as_raw(b"\x00")
 
     def test_extents_none(self):
         buf = BytesIO(b"\x00" * 255)
 
         im = MockImageFile(buf)
         im.tile = [("MOCK", None, 32, None)]
+        d = self.get_decoder()
 
         im.load()
 
-        assert self.decoder.state.xoff == 0
-        assert self.decoder.state.yoff == 0
-        assert self.decoder.state.xsize == 200
-        assert self.decoder.state.ysize == 200
+        assert d.state.xoff == 0
+        assert d.state.yoff == 0
+        assert d.state.xsize == 200
+        assert d.state.ysize == 200
 
     def test_negsize(self):
         buf = BytesIO(b"\x00" * 255)
 
         im = MockImageFile(buf)
         im.tile = [("MOCK", (xoff, yoff, -10, yoff + ysize), 32, None)]
+        self.get_decoder()
 
         with pytest.raises(ValueError):
             im.load()
@@ -287,6 +228,7 @@ class TestPyDecoder(CodecsTest):
 
         im = MockImageFile(buf)
         im.tile = [("MOCK", (xoff, yoff, xoff + xsize + 100, yoff + ysize), 32, None)]
+        self.get_decoder()
 
         with pytest.raises(ValueError):
             im.load()
@@ -295,96 +237,100 @@ class TestPyDecoder(CodecsTest):
         with pytest.raises(ValueError):
             im.load()
 
-    def test_decode(self):
-        decoder = ImageFile.PyDecoder(None)
-        with pytest.raises(NotImplementedError):
-            decoder.decode(None)
-
-
-class TestPyEncoder(CodecsTest):
-    def test_setimage(self):
+    def test_no_format(self):
         buf = BytesIO(b"\x00" * 255)
 
         im = MockImageFile(buf)
+        assert im.format is None
+        assert im.get_format_mimetype() is None
 
-        fp = BytesIO()
-        ImageFile._save(
-            im, fp, [("MOCK", (xoff, yoff, xoff + xsize, yoff + ysize), 0, "RGB")]
-        )
+    def test_exif_jpeg(self, tmp_path):
+        with Image.open("Tests/images/exif-72dpi-int.jpg") as im:  # Little endian
+            exif = im.getexif()
+            assert 258 not in exif
+            assert 40960 in exif
+            assert exif[40963] == 450
+            assert exif[11] == "gThumb 3.0.1"
 
-        assert self.encoder.state.xoff == xoff
-        assert self.encoder.state.yoff == yoff
-        assert self.encoder.state.xsize == xsize
-        assert self.encoder.state.ysize == ysize
+            out = str(tmp_path / "temp.jpg")
+            exif[258] = 8
+            del exif[40960]
+            exif[40963] = 455
+            exif[11] = "Pillow test"
+            im.save(out, exif=exif)
+        with Image.open(out) as reloaded:
+            reloaded_exif = reloaded.getexif()
+            assert reloaded_exif[258] == 8
+            assert 40960 not in reloaded_exif
+            assert reloaded_exif[40963] == 455
+            assert reloaded_exif[11] == "Pillow test"
 
-    def test_extents_none(self):
-        buf = BytesIO(b"\x00" * 255)
+        with Image.open("Tests/images/no-dpi-in-exif.jpg") as im:  # Big endian
+            exif = im.getexif()
+            assert 258 not in exif
+            assert 40962 in exif
+            assert exif[40963] == 200
+            assert exif[305] == "Adobe Photoshop CC 2017 (Macintosh)"
 
-        im = MockImageFile(buf)
-        im.tile = [("MOCK", None, 32, None)]
+            out = str(tmp_path / "temp.jpg")
+            exif[258] = 8
+            del exif[34665]
+            exif[40963] = 455
+            exif[305] = "Pillow test"
+            im.save(out, exif=exif)
+        with Image.open(out) as reloaded:
+            reloaded_exif = reloaded.getexif()
+            assert reloaded_exif[258] == 8
+            assert 34665 not in reloaded_exif
+            assert reloaded_exif[40963] == 455
+            assert reloaded_exif[305] == "Pillow test"
 
-        fp = BytesIO()
-        ImageFile._save(im, fp, [("MOCK", None, 0, "RGB")])
+    @skip_unless_feature("webp")
+    @skip_unless_feature("webp_anim")
+    def test_exif_webp(self, tmp_path):
+        with Image.open("Tests/images/hopper.webp") as im:
+            exif = im.getexif()
+            assert exif == {}
 
-        assert self.encoder.state.xoff == 0
-        assert self.encoder.state.yoff == 0
-        assert self.encoder.state.xsize == 200
-        assert self.encoder.state.ysize == 200
+            out = str(tmp_path / "temp.webp")
+            exif[258] = 8
+            exif[40963] = 455
+            exif[305] = "Pillow test"
 
-    def test_negsize(self):
-        buf = BytesIO(b"\x00" * 255)
+            def check_exif():
+                with Image.open(out) as reloaded:
+                    reloaded_exif = reloaded.getexif()
+                    assert reloaded_exif[258] == 8
+                    assert reloaded_exif[40963] == 455
+                    assert reloaded_exif[305] == "Pillow test"
 
-        im = MockImageFile(buf)
+            im.save(out, exif=exif)
+            check_exif()
+            im.save(out, exif=exif, save_all=True)
+            check_exif()
 
-        fp = BytesIO()
-        self.encoder.cleanup_called = False
-        with pytest.raises(ValueError):
-            ImageFile._save(
-                im, fp, [("MOCK", (xoff, yoff, -10, yoff + ysize), 0, "RGB")]
-            )
-        assert self.encoder.cleanup_called
+    def test_exif_png(self, tmp_path):
+        with Image.open("Tests/images/exif.png") as im:
+            exif = im.getexif()
+            assert exif == {274: 1}
 
-        with pytest.raises(ValueError):
-            ImageFile._save(
-                im, fp, [("MOCK", (xoff, yoff, xoff + xsize, -10), 0, "RGB")]
-            )
+            out = str(tmp_path / "temp.png")
+            exif[258] = 8
+            del exif[274]
+            exif[40963] = 455
+            exif[305] = "Pillow test"
+            im.save(out, exif=exif)
 
-    def test_oversize(self):
-        buf = BytesIO(b"\x00" * 255)
+        with Image.open(out) as reloaded:
+            reloaded_exif = reloaded.getexif()
+            assert reloaded_exif == {258: 8, 40963: 455, 305: "Pillow test"}
 
-        im = MockImageFile(buf)
-
-        fp = BytesIO()
-        with pytest.raises(ValueError):
-            ImageFile._save(
-                im,
-                fp,
-                [("MOCK", (xoff, yoff, xoff + xsize + 100, yoff + ysize), 0, "RGB")],
-            )
-
-        with pytest.raises(ValueError):
-            ImageFile._save(
-                im,
-                fp,
-                [("MOCK", (xoff, yoff, xoff + xsize, yoff + ysize + 100), 0, "RGB")],
-            )
-
-    def test_encode(self):
-        encoder = ImageFile.PyEncoder(None)
-        with pytest.raises(NotImplementedError):
-            encoder.encode(None)
-
-        bytes_consumed, errcode = encoder.encode_to_pyfd()
-        assert bytes_consumed == 0
-        assert ImageFile.ERRORS[errcode] == "bad configuration"
-
-        encoder._pushes_fd = True
-        with pytest.raises(NotImplementedError):
-            encoder.encode_to_pyfd()
-
-        with pytest.raises(NotImplementedError):
-            encoder.encode_to_file(None, None)
-
-    def test_zero_height(self):
-        with pytest.raises(UnidentifiedImageError):
-            Image.open("Tests/images/zero_height.j2k")
+    def test_exif_interop(self):
+        with Image.open("Tests/images/flower.jpg") as im:
+            exif = im.getexif()
+            assert exif.get_ifd(0xA005) == {
+                1: "R98",
+                2: b"0100",
+                4097: 2272,
+                4098: 1704,
+            }

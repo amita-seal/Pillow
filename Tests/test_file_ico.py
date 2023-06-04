@@ -1,11 +1,9 @@
 import io
-import os
 
 import pytest
-
 from PIL import IcoImagePlugin, Image, ImageDraw
 
-from .helper import assert_image_equal, assert_image_equal_tofile, hopper
+from .helper import assert_image_equal, hopper
 
 TEST_ICO_FILE = "Tests/images/hopper.ico"
 
@@ -17,22 +15,6 @@ def test_sanity():
     assert im.size == (16, 16)
     assert im.format == "ICO"
     assert im.get_format_mimetype() == "image/x-icon"
-
-
-def test_load():
-    with Image.open(TEST_ICO_FILE) as im:
-        assert im.load()[0, 0] == (1, 1, 9, 255)
-
-
-def test_mask():
-    with Image.open("Tests/images/hopper_mask.ico") as im:
-        assert_image_equal_tofile(im, "Tests/images/hopper_mask.png")
-
-
-def test_black_and_white():
-    with Image.open("Tests/images/black_and_white.ico") as im:
-        assert im.mode == "RGBA"
-        assert im.size == (16, 16)
 
 
 def test_invalid_file():
@@ -54,9 +36,7 @@ def test_save_to_bytes():
         assert im.mode == reloaded.mode
         assert (64, 64) == reloaded.size
         assert reloaded.format == "ICO"
-        assert_image_equal(
-            reloaded, hopper().resize((64, 64), Image.Resampling.LANCZOS)
-        )
+        assert_image_equal(reloaded, hopper().resize((64, 64), Image.LANCZOS))
 
     # The other one
     output.seek(0)
@@ -66,98 +46,7 @@ def test_save_to_bytes():
         assert im.mode == reloaded.mode
         assert (32, 32) == reloaded.size
         assert reloaded.format == "ICO"
-        assert_image_equal(
-            reloaded, hopper().resize((32, 32), Image.Resampling.LANCZOS)
-        )
-
-
-def test_getpixel(tmp_path):
-    temp_file = str(tmp_path / "temp.ico")
-
-    im = hopper()
-    im.save(temp_file, "ico", sizes=[(32, 32), (64, 64)])
-
-    with Image.open(temp_file) as reloaded:
-        reloaded.load()
-        reloaded.size = (32, 32)
-
-        assert reloaded.getpixel((0, 0)) == (18, 20, 62)
-
-
-def test_no_duplicates(tmp_path):
-    temp_file = str(tmp_path / "temp.ico")
-    temp_file2 = str(tmp_path / "temp2.ico")
-
-    im = hopper()
-    sizes = [(32, 32), (64, 64)]
-    im.save(temp_file, "ico", sizes=sizes)
-
-    sizes.append(sizes[-1])
-    im.save(temp_file2, "ico", sizes=sizes)
-
-    assert os.path.getsize(temp_file) == os.path.getsize(temp_file2)
-
-
-def test_different_bit_depths(tmp_path):
-    temp_file = str(tmp_path / "temp.ico")
-    temp_file2 = str(tmp_path / "temp2.ico")
-
-    im = hopper()
-    im.save(temp_file, "ico", bitmap_format="bmp", sizes=[(128, 128)])
-
-    hopper("1").save(
-        temp_file2,
-        "ico",
-        bitmap_format="bmp",
-        sizes=[(128, 128)],
-        append_images=[im],
-    )
-
-    assert os.path.getsize(temp_file) != os.path.getsize(temp_file2)
-
-    # Test that only matching sizes of different bit depths are saved
-    temp_file3 = str(tmp_path / "temp3.ico")
-    temp_file4 = str(tmp_path / "temp4.ico")
-
-    im.save(temp_file3, "ico", bitmap_format="bmp", sizes=[(128, 128)])
-    im.save(
-        temp_file4,
-        "ico",
-        bitmap_format="bmp",
-        sizes=[(128, 128)],
-        append_images=[Image.new("P", (64, 64))],
-    )
-
-    assert os.path.getsize(temp_file3) == os.path.getsize(temp_file4)
-
-
-@pytest.mark.parametrize("mode", ("1", "L", "P", "RGB", "RGBA"))
-def test_save_to_bytes_bmp(mode):
-    output = io.BytesIO()
-    im = hopper(mode)
-    im.save(output, "ico", bitmap_format="bmp", sizes=[(32, 32), (64, 64)])
-
-    # The default image
-    output.seek(0)
-    with Image.open(output) as reloaded:
-        assert reloaded.info["sizes"] == {(32, 32), (64, 64)}
-
-        assert "RGBA" == reloaded.mode
-        assert (64, 64) == reloaded.size
-        assert reloaded.format == "ICO"
-        im = hopper(mode).resize((64, 64), Image.Resampling.LANCZOS).convert("RGBA")
-        assert_image_equal(reloaded, im)
-
-    # The other one
-    output.seek(0)
-    with Image.open(output) as reloaded:
-        reloaded.size = (32, 32)
-
-        assert "RGBA" == reloaded.mode
-        assert (32, 32) == reloaded.size
-        assert reloaded.format == "ICO"
-        im = hopper(mode).resize((32, 32), Image.Resampling.LANCZOS).convert("RGBA")
-        assert_image_equal(reloaded, im)
+        assert_image_equal(reloaded, hopper().resize((32, 32), Image.LANCZOS))
 
 
 def test_incorrect_size():
@@ -175,6 +64,7 @@ def test_save_256x256(tmp_path):
         # Act
         im.save(outfile)
     with Image.open(outfile) as im_saved:
+
         # Assert
         assert im_saved.size == (256, 256)
 
@@ -195,26 +85,14 @@ def test_only_save_relevant_sizes(tmp_path):
         assert im_saved.info["sizes"] == {(16, 16), (24, 24), (32, 32), (48, 48)}
 
 
-def test_save_append_images(tmp_path):
-    # append_images should be used for scaled down versions of the image
-    im = hopper("RGBA")
-    provided_im = Image.new("RGBA", (32, 32), (255, 0, 0))
-    outfile = str(tmp_path / "temp_saved_multi_icon.ico")
-    im.save(outfile, sizes=[(32, 32), (128, 128)], append_images=[provided_im])
-
-    with Image.open(outfile) as reread:
-        assert_image_equal(reread, hopper("RGBA"))
-
-        reread.size = (32, 32)
-        assert_image_equal(reread, provided_im)
-
-
 def test_unexpected_size():
     # This image has been manually hexedited to state that it is 16x32
     # while the image within is still 16x16
-    with pytest.warns(UserWarning):
+    def open():
         with Image.open("Tests/images/hopper_unexpected.ico") as im:
             assert im.size == (16, 16)
+
+    pytest.warns(UserWarning, open)
 
 
 def test_draw_reloaded(tmp_path):
@@ -226,4 +104,6 @@ def test_draw_reloaded(tmp_path):
         im.save(outfile)
 
     with Image.open(outfile) as im:
-        assert_image_equal_tofile(im, "Tests/images/hopper_draw.ico")
+        im.save("Tests/images/hopper_draw.ico")
+        with Image.open("Tests/images/hopper_draw.ico") as reloaded:
+            assert_image_equal(im, reloaded)

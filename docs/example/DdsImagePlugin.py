@@ -210,17 +210,12 @@ class DdsImageFile(ImageFile.ImageFile):
     format_description = "DirectDraw Surface"
 
     def _open(self):
-        if not _accept(self.fp.read(4)):
-            msg = "not a DDS file"
-            raise SyntaxError(msg)
-        (header_size,) = struct.unpack("<I", self.fp.read(4))
+        magic, header_size = struct.unpack("<II", self.fp.read(8))
         if header_size != 124:
-            msg = f"Unsupported header size {repr(header_size)}"
-            raise OSError(msg)
+            raise OSError("Unsupported header size %r" % (header_size))
         header_bytes = self.fp.read(header_size - 4)
         if len(header_bytes) != 120:
-            msg = f"Incomplete header: {len(header_bytes)} bytes"
-            raise OSError(msg)
+            raise OSError("Incomplete header: %s bytes" % len(header_bytes))
         header = BytesIO(header_bytes)
 
         flags, height, width = struct.unpack("<3I", header.read(12))
@@ -240,8 +235,7 @@ class DdsImageFile(ImageFile.ImageFile):
         elif fourcc == b"DXT5":
             self.decoder = "DXT5"
         else:
-            msg = f"Unimplemented pixel format {fourcc}"
-            raise NotImplementedError(msg)
+            raise NotImplementedError("Unimplemented pixel format %r" % fourcc)
 
         self.tile = [(self.decoder, (0, 0) + self.size, 0, (self.mode, 0, 1))]
 
@@ -256,9 +250,8 @@ class DXT1Decoder(ImageFile.PyDecoder):
         try:
             self.set_as_raw(_dxt1(self.fd, self.state.xsize, self.state.ysize))
         except struct.error as e:
-            msg = "Truncated DDS file"
-            raise OSError(msg) from e
-        return -1, 0
+            raise OSError("Truncated DDS file") from e
+        return 0, 0
 
 
 class DXT5Decoder(ImageFile.PyDecoder):
@@ -268,18 +261,17 @@ class DXT5Decoder(ImageFile.PyDecoder):
         try:
             self.set_as_raw(_dxt5(self.fd, self.state.xsize, self.state.ysize))
         except struct.error as e:
-            msg = "Truncated DDS file"
-            raise OSError(msg) from e
-        return -1, 0
+            raise OSError("Truncated DDS file") from e
+        return 0, 0
 
 
 Image.register_decoder("DXT1", DXT1Decoder)
 Image.register_decoder("DXT5", DXT5Decoder)
 
 
-def _accept(prefix):
+def _validate(prefix):
     return prefix[:4] == b"DDS "
 
 
-Image.register_open(DdsImageFile.format, DdsImageFile, _accept)
+Image.register_open(DdsImageFile.format, DdsImageFile, _validate)
 Image.register_extension(DdsImageFile.format, ".dds")

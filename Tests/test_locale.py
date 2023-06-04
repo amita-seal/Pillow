@@ -1,7 +1,6 @@
 import locale
 
 import pytest
-
 from PIL import Image
 
 # ref https://github.com/python-pillow/Pillow/issues/272

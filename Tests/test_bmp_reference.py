@@ -1,6 +1,6 @@
 import os
-import warnings
 
+import pytest
 from PIL import Image
 
 from .helper import assert_image_similar
@@ -15,32 +15,33 @@ def get_files(d, ext=".bmp"):
 
 
 def test_bad():
-    """These shouldn't crash/dos, but they shouldn't return anything
-    either"""
+    """ These shouldn't crash/dos, but they shouldn't return anything
+    either """
     for f in get_files("b"):
-        # Assert that there is no unclosed file warning
-        with warnings.catch_warnings():
+
+        def open(f):
             try:
                 with Image.open(f) as im:
                     im.load()
             except Exception:  # as msg:
                 pass
 
+        # Assert that there is no unclosed file warning
+        pytest.warns(None, open, f)
+
 
 def test_questionable():
-    """These shouldn't crash/dos, but it's not well defined that these
-    are in spec"""
+    """ These shouldn't crash/dos, but it's not well defined that these
+    are in spec """
     supported = [
         "pal8os2v2.bmp",
         "rgb24prof.bmp",
         "pal1p1.bmp",
-        "pal4rletrns.bmp",
         "pal8offs.bmp",
         "rgb24lprof.bmp",
         "rgb32fakealpha.bmp",
         "rgb24largepal.bmp",
         "pal8os2sp.bmp",
-        "pal8rletrns.bmp",
         "rgb32bf-xbgr.bmp",
     ]
     for f in get_files("q"):
@@ -48,15 +49,15 @@ def test_questionable():
             with Image.open(f) as im:
                 im.load()
             if os.path.basename(f) not in supported:
-                print(f"Please add {f} to the partially supported bmp specs.")
+                print("Please add %s to the partially supported bmp specs." % f)
         except Exception:  # as msg:
             if os.path.basename(f) in supported:
                 raise
 
 
 def test_good():
-    """These should all work. There's a set of target files in the
-    html directory that we can compare against."""
+    """ These should all work. There's a set of target files in the
+    html directory that we can compare against. """
 
     # Target files, if they're not just replacing the extension
     file_map = {
@@ -83,7 +84,7 @@ def test_good():
         if name in file_map:
             return os.path.join(base, "html", file_map[name])
         name = os.path.splitext(name)[0]
-        return os.path.join(base, "html", f"{name}.png")
+        return os.path.join(base, "html", "%s.png" % name)
 
     for f in get_files("g"):
         try:
@@ -106,4 +107,4 @@ def test_good():
                 os.path.join(base, "g", "pal8rle.bmp"),
                 os.path.join(base, "g", "pal4rle.bmp"),
             )
-            assert f in unsupported, f"Unsupported Image {f}: {msg}"
+            assert f in unsupported, "Unsupported Image {}: {}".format(f, msg)

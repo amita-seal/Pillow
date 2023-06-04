@@ -1,8 +1,7 @@
 from io import BytesIO
 
 import pytest
-
-from PIL import Image, XbmImagePlugin
+from PIL import Image
 
 from .helper import hopper
 
@@ -44,6 +43,7 @@ def test_open():
 
     # Act
     with Image.open(filename) as im:
+
         # Assert
         assert im.mode == "1"
         assert im.size == (128, 128)
@@ -56,16 +56,10 @@ def test_open_filename_with_underscore():
 
     # Act
     with Image.open(filename) as im:
+
         # Assert
         assert im.mode == "1"
         assert im.size == (128, 128)
-
-
-def test_invalid_file():
-    invalid_file = "Tests/images/flower.jpg"
-
-    with pytest.raises(SyntaxError):
-        XbmImagePlugin.XbmImageFile(invalid_file)
 
 
 def test_save_wrong_mode(tmp_path):

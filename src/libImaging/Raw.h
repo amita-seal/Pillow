@@ -1,6 +1,7 @@
 /* Raw.h */
 
 typedef struct {
+
     /* CONFIGURATION */
 
     /* Distance between lines (0=no padding) */

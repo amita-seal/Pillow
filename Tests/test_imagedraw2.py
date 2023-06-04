@@ -1,13 +1,10 @@
 import os.path
 
-import pytest
-
-from PIL import Image, ImageDraw, ImageDraw2, features
+from PIL import Image, ImageDraw, ImageDraw2
 
 from .helper import (
     assert_image_equal,
-    assert_image_equal_tofile,
-    assert_image_similar_tofile,
+    assert_image_similar,
     hopper,
     skip_unless_feature,
 )
@@ -27,16 +24,15 @@ X1 = int(X0 * 3)
 Y0 = int(H / 4)
 Y1 = int(X0 * 3)
 
-# Bounding boxes
-BBOX = (((X0, Y0), (X1, Y1)), [(X0, Y0), (X1, Y1)], (X0, Y0, X1, Y1), [X0, Y0, X1, Y1])
+# Two kinds of bounding box
+BBOX1 = [(X0, Y0), (X1, Y1)]
+BBOX2 = [X0, Y0, X1, Y1]
 
-# Coordinate sequences
-POINTS = (
-    ((10, 10), (20, 40), (30, 30)),
-    [(10, 10), (20, 40), (30, 30)],
-    (10, 10, 20, 40, 30, 30),
-    [10, 10, 20, 40, 30, 30],
-)
+# Two kinds of coordinate sequences
+POINTS1 = [(10, 10), (20, 40), (30, 30)]
+POINTS2 = [10, 10, 20, 40, 30, 30]
+
+KITE_POINTS = [(10, 50), (70, 10), (90, 50), (70, 90), (10, 50)]
 
 FONT_PATH = "Tests/fonts/FreeMono.ttf"
 
@@ -53,19 +49,27 @@ def test_sanity():
     draw.line(list(range(10)), pen)
 
 
-@pytest.mark.parametrize("bbox", BBOX)
-def test_ellipse(bbox):
+def helper_ellipse(mode, bbox):
     # Arrange
     im = Image.new("RGB", (W, H))
     draw = ImageDraw2.Draw(im)
     pen = ImageDraw2.Pen("blue", width=2)
     brush = ImageDraw2.Brush("green")
+    expected = "Tests/images/imagedraw_ellipse_{}.png".format(mode)
 
     # Act
     draw.ellipse(bbox, pen, brush)
 
     # Assert
-    assert_image_similar_tofile(im, "Tests/images/imagedraw_ellipse_RGB.png", 1)
+    assert_image_similar(im, Image.open(expected), 1)
+
+
+def test_ellipse1():
+    helper_ellipse("RGB", BBOX1)
+
+
+def test_ellipse2():
+    helper_ellipse("RGB", BBOX2)
 
 
 def test_ellipse_edge():
@@ -75,14 +79,13 @@ def test_ellipse_edge():
     brush = ImageDraw2.Brush("white")
 
     # Act
-    draw.ellipse(((0, 0), (W - 1, H - 1)), brush)
+    draw.ellipse(((0, 0), (W - 1, H)), brush)
 
     # Assert
-    assert_image_similar_tofile(im, "Tests/images/imagedraw_ellipse_edge.png", 1)
+    assert_image_similar(im, Image.open("Tests/images/imagedraw_ellipse_edge.png"), 1)
 
 
-@pytest.mark.parametrize("points", POINTS)
-def test_line(points):
+def helper_line(points):
     # Arrange
     im = Image.new("RGB", (W, H))
     draw = ImageDraw2.Draw(im)
@@ -92,11 +95,18 @@ def test_line(points):
     draw.line(points, pen)
 
     # Assert
-    assert_image_equal_tofile(im, "Tests/images/imagedraw_line.png")
+    assert_image_equal(im, Image.open("Tests/images/imagedraw_line.png"))
 
 
-@pytest.mark.parametrize("points", POINTS)
-def test_line_pen_as_brush(points):
+def test_line1_pen():
+    helper_line(POINTS1)
+
+
+def test_line2_pen():
+    helper_line(POINTS2)
+
+
+def test_line_pen_as_brush():
     # Arrange
     im = Image.new("RGB", (W, H))
     draw = ImageDraw2.Draw(im)
@@ -105,14 +115,13 @@ def test_line_pen_as_brush(points):
 
     # Act
     # Pass in the pen as the brush parameter
-    draw.line(points, pen, brush)
+    draw.line(POINTS1, pen, brush)
 
     # Assert
-    assert_image_equal_tofile(im, "Tests/images/imagedraw_line.png")
+    assert_image_equal(im, Image.open("Tests/images/imagedraw_line.png"))
 
 
-@pytest.mark.parametrize("points", POINTS)
-def test_polygon(points):
+def helper_polygon(points):
     # Arrange
     im = Image.new("RGB", (W, H))
     draw = ImageDraw2.Draw(im)
@@ -123,11 +132,18 @@ def test_polygon(points):
     draw.polygon(points, pen, brush)
 
     # Assert
-    assert_image_equal_tofile(im, "Tests/images/imagedraw_polygon.png")
+    assert_image_equal(im, Image.open("Tests/images/imagedraw_polygon.png"))
 
 
-@pytest.mark.parametrize("bbox", BBOX)
-def test_rectangle(bbox):
+def test_polygon1():
+    helper_polygon(POINTS1)
+
+
+def test_polygon2():
+    helper_polygon(POINTS2)
+
+
+def helper_rectangle(bbox):
     # Arrange
     im = Image.new("RGB", (W, H))
     draw = ImageDraw2.Draw(im)
@@ -138,7 +154,15 @@ def test_rectangle(bbox):
     draw.rectangle(bbox, pen, brush)
 
     # Assert
-    assert_image_equal_tofile(im, "Tests/images/imagedraw_rectangle.png")
+    assert_image_equal(im, Image.open("Tests/images/imagedraw_rectangle.png"))
+
+
+def test_rectangle1():
+    helper_rectangle(BBOX1)
+
+
+def test_rectangle2():
+    helper_rectangle(BBOX2)
 
 
 def test_big_rectangle():
@@ -154,7 +178,7 @@ def test_big_rectangle():
     draw.rectangle(bbox, brush)
 
     # Assert
-    assert_image_similar_tofile(im, expected, 1)
+    assert_image_similar(im, Image.open(expected), 1)
 
 
 @skip_unless_feature("freetype2")
@@ -169,22 +193,21 @@ def test_text():
     draw.text((5, 5), "ImageDraw2", font)
 
     # Assert
-    assert_image_similar_tofile(im, expected, 13)
+    assert_image_similar(im, Image.open(expected), 13)
 
 
 @skip_unless_feature("freetype2")
-def test_textbbox():
+def test_textsize():
     # Arrange
     im = Image.new("RGB", (W, H))
     draw = ImageDraw2.Draw(im)
     font = ImageDraw2.Font("white", FONT_PATH)
 
     # Act
-    bbox = draw.textbbox((0, 0), "ImageDraw2", font)
+    size = draw.textsize("ImageDraw2", font)
 
     # Assert
-    right = 72 if features.check_feature("raqm") else 70
-    assert bbox == (0, 2, right, 12)
+    assert size[1] == 12
 
 
 @skip_unless_feature("freetype2")
@@ -197,10 +220,9 @@ def test_textsize_empty_string():
     # Act
     # Should not cause 'SystemError: <built-in method getsize of
     # ImagingFont object at 0x...> returned NULL without setting an error'
-    draw.textbbox((0, 0), "", font)
-    draw.textbbox((0, 0), "\n", font)
-    draw.textbbox((0, 0), "test\n", font)
-    draw.textlength("", font)
+    draw.textsize("", font)
+    draw.textsize("\n", font)
+    draw.textsize("test\n", font)
 
 
 @skip_unless_feature("freetype2")

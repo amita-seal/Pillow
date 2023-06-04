@@ -1,8 +1,6 @@
 import os
 import sys
-from io import BytesIO
-
-import pytest
+from io import StringIO
 
 from PIL import Image, PSDraw
 
@@ -46,21 +44,10 @@ def test_draw_postscript(tmp_path):
     assert os.path.getsize(tempfile) > 0
 
 
-@pytest.mark.parametrize("buffer", (True, False))
-def test_stdout(buffer):
+def test_stdout():
     # Temporarily redirect stdout
     old_stdout = sys.stdout
-
-    if buffer:
-
-        class MyStdOut:
-            buffer = BytesIO()
-
-        mystdout = MyStdOut()
-    else:
-        mystdout = BytesIO()
-
-    sys.stdout = mystdout
+    sys.stdout = mystdout = StringIO()
 
     ps = PSDraw.PSDraw()
     _create_document(ps)
@@ -68,6 +55,4 @@ def test_stdout(buffer):
     # Reset stdout
     sys.stdout = old_stdout
 
-    if buffer:
-        mystdout = mystdout.buffer
-    assert mystdout.getvalue() != b""
+    assert mystdout.getvalue() != ""

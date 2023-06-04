@@ -1,7 +1,4 @@
-import warnings
-
 import pytest
-
 from PIL import DcxImagePlugin, Image
 
 from .helper import assert_image_equal, hopper, is_pypy
@@ -15,6 +12,7 @@ def test_sanity():
 
     # Act
     with Image.open(TEST_FILE) as im:
+
         # Assert
         assert im.size == (128, 128)
         assert isinstance(im, DcxImagePlugin.DcxImageFile)
@@ -28,21 +26,24 @@ def test_unclosed_file():
         im = Image.open(TEST_FILE)
         im.load()
 
-    with pytest.warns(ResourceWarning):
-        open()
+    pytest.warns(ResourceWarning, open)
 
 
 def test_closed_file():
-    with warnings.catch_warnings():
+    def open():
         im = Image.open(TEST_FILE)
         im.load()
         im.close()
 
+    pytest.warns(None, open)
+
 
 def test_context_manager():
-    with warnings.catch_warnings():
+    def open():
         with Image.open(TEST_FILE) as im:
             im.load()
+
+    pytest.warns(None, open)
 
 
 def test_invalid_file():
@@ -54,6 +55,7 @@ def test_invalid_file():
 def test_tell():
     # Arrange
     with Image.open(TEST_FILE) as im:
+
         # Act
         frame = im.tell()
 

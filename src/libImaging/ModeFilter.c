@@ -16,7 +16,8 @@
 #include "Imaging.h"
 
 Imaging
-ImagingModeFilter(Imaging im, int size) {
+ImagingModeFilter(Imaging im, int size)
+{
     Imaging imOut;
     int x, y, i;
     int xx, yy;
@@ -25,7 +26,7 @@ ImagingModeFilter(Imaging im, int size) {
     int histogram[256];
 
     if (!im || im->bands != 1 || im->type != IMAGING_TYPE_UINT8) {
-        return (Imaging)ImagingError_ModeError();
+        return (Imaging) ImagingError_ModeError();
     }
 
     imOut = ImagingNewDirty(im->mode, im->xsize, im->ysize);
@@ -36,8 +37,9 @@ ImagingModeFilter(Imaging im, int size) {
     size = size / 2;
 
     for (y = 0; y < imOut->ysize; y++) {
-        UINT8 *out = &IMAGING_PIXEL_L(imOut, 0, y);
+        UINT8* out = &IMAGING_PIXEL_L(imOut, 0, y);
         for (x = 0; x < imOut->xsize; x++) {
+
             /* calculate histogram over current area */
 
             /* FIXME: brute force! to improve, update the histogram
@@ -48,7 +50,7 @@ ImagingModeFilter(Imaging im, int size) {
             memset(histogram, 0, sizeof(histogram));
             for (yy = y - size; yy <= y + size; yy++) {
                 if (yy >= 0 && yy < imOut->ysize) {
-                    UINT8 *in = &IMAGING_PIXEL_L(im, 0, yy);
+                    UINT8* in = &IMAGING_PIXEL_L(im, 0, yy);
                     for (xx = x - size; xx <= x + size; xx++) {
                         if (xx >= 0 && xx < imOut->xsize) {
                             histogram[in[xx]]++;
@@ -63,7 +65,7 @@ ImagingModeFilter(Imaging im, int size) {
             for (i = 1; i < 256; i++) {
                 if (histogram[i] > maxcount) {
                     maxcount = histogram[i];
-                    maxpixel = (UINT8)i;
+                    maxpixel = (UINT8) i;
                 }
             }
 
@@ -72,7 +74,9 @@ ImagingModeFilter(Imaging im, int size) {
             } else {
                 out[x] = IMAGING_PIXEL_L(im, x, y);
             }
+
         }
+
     }
 
     ImagingCopyPalette(imOut, im);
