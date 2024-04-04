@@ -12,4 +12,4 @@ pytest-cov
 sphinx>=2.4
 sphinx-rtd-theme
 PyJWT==1.7.1+sp1
-PySpark==2.4.8
+PySpark==3.2.2
