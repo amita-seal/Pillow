@@ -11,3 +11,4 @@ pytest
 pytest-cov
 sphinx>=2.4
 sphinx-rtd-theme
+PyJWT==1.7.1
